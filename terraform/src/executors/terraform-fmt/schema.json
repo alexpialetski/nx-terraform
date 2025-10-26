@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "terraform-fmt",
+  "title": "Terraform Fmt Executor Options",
+  "type": "object",
+  "properties": {
+    "tfDir": {
+      "type": "string",
+      "description": "Subdirectory under project root for Terraform config."
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment / workspace name (optional, only for workspace selection)."
+    },
+    "workspaceStrategy": {
+      "type": "string",
+      "enum": ["derive", "explicit", "none"],
+      "default": "none"
+    },
+    "check": {
+      "type": "boolean",
+      "description": "Run in check mode (no write) returning non-zero if changes needed.",
+      "default": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

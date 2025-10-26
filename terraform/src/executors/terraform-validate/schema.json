@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "terraform-validate",
+  "title": "Terraform Validate Executor Options",
+  "type": "object",
+  "properties": {
+    "tfDir": {
+      "type": "string",
+      "description": "Subdirectory under project root for Terraform config."
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment / workspace name (for workspace selection)."
+    },
+    "workspaceStrategy": {
+      "type": "string",
+      "enum": ["derive", "explicit", "none"],
+      "default": "none"
+    },
+    "noInit": {
+      "type": "boolean",
+      "description": "Skip implicit init (assume already initialized).",
+      "default": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "terraform-output",
+  "title": "Terraform Output Executor Options",
+  "type": "object",
+  "properties": {
+    "tfDir": {
+      "type": "string",
+      "description": "Subdirectory under project root for Terraform config."
+    },
+    "env": { "type": "string", "description": "Environment / workspace name." },
+    "workspaceStrategy": {
+      "type": "string",
+      "enum": ["derive", "explicit", "none"],
+      "default": "derive"
+    },
+    "allowSensitive": {
+      "type": "boolean",
+      "description": "Include sensitive values in outputs.env instead of masking.",
+      "default": false
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

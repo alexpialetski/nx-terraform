@@ -15,6 +15,26 @@
       "implementation": "./src/executors/terraform-apply/executor",
       "schema": "./src/executors/terraform-apply/schema.json",
       "description": "Apply a previously generated Terraform plan with stale plan hash protection."
+    },
+    "terraform-output": {
+      "implementation": "./src/executors/terraform-output/executor",
+      "schema": "./src/executors/terraform-output/schema.json",
+      "description": "Export Terraform state outputs to JSON & .env files with optional sensitive value redaction."
+    },
+    "terraform-fmt": {
+      "implementation": "./src/executors/terraform-fmt/executor",
+      "schema": "./src/executors/terraform-fmt/schema.json",
+      "description": "Format Terraform configuration recursively and report changed files."
+    },
+    "terraform-validate": {
+      "implementation": "./src/executors/terraform-validate/executor",
+      "schema": "./src/executors/terraform-validate/schema.json",
+      "description": "Validate Terraform configuration (after init) returning structured result."
+    },
+    "terraform-destroy": {
+      "implementation": "./src/executors/terraform-destroy/executor",
+      "schema": "./src/executors/terraform-destroy/schema.json",
+      "description": "Destroy Terraform managed infrastructure with safety warnings for unapplied plan hashes."
     }
   }
 }
