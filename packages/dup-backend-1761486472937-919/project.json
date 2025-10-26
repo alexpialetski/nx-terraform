@@ -1,0 +1,24 @@
+{
+  "name": "dup-backend-1761486472937-919",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/dup-backend-1761486472937-919",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "terraform-init": {
+      "executor": "terraform:terraform-init"
+    },
+    "terraform-plan": {
+      "executor": "terraform:terraform-plan",
+      "dependsOn": ["terraform-init"]
+    },
+    "terraform-apply": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["terraform-plan"],
+      "options": {
+        "cwd": "packages/dup-backend-1761486472937-919",
+        "command": "terraform apply -auto-approve tfplan"
+      }
+    }
+  }
+}

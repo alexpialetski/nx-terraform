@@ -1,0 +1,18 @@
+// Main Terraform configuration for <%= projectName %>
+terraform {
+  required_version = ">= 1.6.0"
+  required_providers {
+<% if (provider === 'null') { %>    null = { source = "hashicorp/null", version = ">= 3.2.1" }
+<% } else if (provider === 'aws') { %>    aws = { source = "hashicorp/aws", version = ">= 5.0.0" }
+<% } %>  }
+}
+
+// Example resource (safe to keep for plan / apply tests)
+<% if (provider === 'null') { %>
+resource "null_resource" "example" {
+  triggers = { generated = timestamp() }
+}
+<% } else if (provider === 'aws') { %>
+data "aws_caller_identity" "current" {}
+output "account_id" { value = data.aws_caller_identity.current.account_id }
+<% } %>

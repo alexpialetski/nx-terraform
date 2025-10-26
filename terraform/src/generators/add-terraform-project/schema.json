@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "add-terraform-project",
+  "title": "Add Terraform Project Options",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "description": "Project name" },
+    "directory": {
+      "type": "string",
+      "description": "Custom directory root (default packages/<name>)"
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["null", "aws"],
+      "default": "null",
+      "description": "Primary provider to scaffold"
+    },
+    "envs": {
+      "type": "string",
+      "description": "Comma separated environment names (e.g. dev,staging,prod)",
+      "default": "dev"
+    },
+    "withBackend": {
+      "type": "boolean",
+      "description": "Include backend.tf with commented remote backend template",
+      "default": false
+    },
+    "tags": {
+      "type": "string",
+      "description": "Comma separated tags to add to project"
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

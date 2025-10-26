@@ -1,0 +1,6 @@
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
+locals {
+  bucket_name = "e2e-prefix-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
+}

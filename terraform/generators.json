@@ -1,0 +1,14 @@
+{
+  "generators": {
+    "add-aws-setup": {
+      "implementation": "./src/generators/add-aws-setup/generator",
+      "schema": "./src/generators/add-aws-setup/schema.json",
+      "description": "Scaffold an AWS Terraform backend (S3 state bucket + backend.config) project with dynamic bucket prefix."
+    },
+    "add-terraform-project": {
+      "implementation": "./src/generators/add-terraform-project/generator",
+      "schema": "./src/generators/add-terraform-project/schema.json",
+      "description": "Create a generic Terraform project (provider, variables, outputs, optional backend, multiple environments) wired to terraform plugin executors."
+    }
+  }
+}

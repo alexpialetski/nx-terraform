@@ -1,0 +1,20 @@
+{
+  "name": "dup-backend-1761488644866-17305",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/dup-backend-1761488644866-17305",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "terraform-init": {
+      "executor": "terraform:terraform-init"
+    },
+    "terraform-plan": {
+      "executor": "terraform:terraform-plan",
+      "dependsOn": ["terraform-init"]
+    },
+    "terraform-apply": {
+      "executor": "terraform:terraform-apply",
+      "dependsOn": ["terraform-plan"]
+    }
+  }
+}

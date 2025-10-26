@@ -1,0 +1,70 @@
+{
+  "name": "tf-generic-1761488088351",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/tf-generic-1761488088351",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "terraform-init": {
+      "executor": "terraform:terraform-init"
+    },
+    "terraform-plan": {
+      "executor": "terraform:terraform-plan",
+      "dependsOn": ["terraform-init"],
+      "defaultConfiguration": "dev",
+      "configurations": {
+        "dev": {
+          "env": "dev",
+          "varFile": "tfvars/dev.tfvars"
+        },
+        "qa": {
+          "env": "qa",
+          "varFile": "tfvars/qa.tfvars"
+        }
+      }
+    },
+    "terraform-apply": {
+      "executor": "terraform:terraform-apply",
+      "dependsOn": ["terraform-plan"]
+    },
+    "terraform-destroy": {
+      "executor": "nx:run-commands",
+      "defaultConfiguration": "dev",
+      "configurations": {
+        "dev": {
+          "env": "dev"
+        },
+        "qa": {
+          "env": "qa"
+        }
+      },
+      "options": {
+        "cwd": "packages/tf-generic-1761488088351",
+        "command": "terraform destroy -auto-approve"
+      }
+    },
+    "terraform-fmt": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "packages/tf-generic-1761488088351",
+        "command": "terraform fmt -write=true"
+      }
+    },
+    "terraform-validate": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["terraform-init"],
+      "options": {
+        "cwd": "packages/tf-generic-1761488088351",
+        "command": "terraform validate"
+      }
+    },
+    "terraform-output": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["terraform-init"],
+      "options": {
+        "cwd": "packages/tf-generic-1761488088351",
+        "command": "terraform output"
+      }
+    }
+  }
+}

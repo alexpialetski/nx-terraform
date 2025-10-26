@@ -1,0 +1,13 @@
+// Provider configuration
+<% if (provider === 'null') { %>
+provider "null" {}
+<% } else if (provider === 'aws') { %>
+provider "aws" {
+  region = var.region != null ? var.region : "us-east-1"
+}
+variable "region" {
+  type        = string
+  description = "AWS region"
+  default     = "us-east-1"
+}
+<% } %>

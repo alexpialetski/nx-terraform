@@ -1,0 +1,24 @@
+{
+  "title": "Terraform Plan Executor",
+  "type": "object",
+  "properties": {
+    "tfDir": { "type": "string" },
+    "env": { "type": "string", "description": "Environment name / workspace" },
+    "workspaceStrategy": {
+      "type": "string",
+      "enum": ["derive", "explicit", "none"],
+      "default": "derive"
+    },
+    "detailedExitCode": { "type": "boolean", "default": true },
+    "planFile": {
+      "type": "string",
+      "description": "Override path for generated plan file."
+    },
+    "varFile": {
+      "type": "string",
+      "description": "Explicit tfvars file path or relative path."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

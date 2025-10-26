@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "executors": {
+    "terraform-init": {
+      "implementation": "./src/executors/terraform-init/executor",
+      "schema": "./src/executors/terraform-init/schema.json",
+      "description": "Initialize Terraform working directory (backend + providers)."
+    },
+    "terraform-plan": {
+      "implementation": "./src/executors/terraform-plan/executor",
+      "schema": "./src/executors/terraform-plan/schema.json",
+      "description": "Generate a Terraform plan with deterministic hashing & summary artifacts."
+    },
+    "terraform-apply": {
+      "implementation": "./src/executors/terraform-apply/executor",
+      "schema": "./src/executors/terraform-apply/schema.json",
+      "description": "Apply a previously generated Terraform plan with stale plan hash protection."
+    }
+  }
+}

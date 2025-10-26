@@ -1,0 +1,17 @@
+{
+  "name": "planproj-1761488095992",
+  "root": "packages/planproj-1761488095992",
+  "sourceRoot": "packages/planproj-1761488095992",
+  "projectType": "application",
+  "targets": {
+    "terraform-init": {
+      "executor": "terraform:terraform-init"
+    },
+    "terraform-plan": {
+      "executor": "terraform:terraform-plan",
+      "dependsOn": [
+        "terraform-init"
+      ]
+    }
+  }
+}

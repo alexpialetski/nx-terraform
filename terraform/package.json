@@ -1,0 +1,14 @@
+{
+  "name": "terraform",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "generators": "./generators.json",
+  "executors": "./executors.json",
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "@nx/devkit": "22.0.1",
+    "fast-glob": "^3.3.2"
+  }
+}

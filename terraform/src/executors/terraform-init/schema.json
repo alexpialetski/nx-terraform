@@ -1,0 +1,27 @@
+{
+  "title": "Terraform Init Executor",
+  "type": "object",
+  "properties": {
+    "tfDir": {
+      "type": "string",
+      "description": "Subdirectory containing terraform configuration."
+    },
+    "reconfigure": { "type": "boolean", "default": false },
+    "backendConfig": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of -backend-config arguments (key=value or file paths)."
+    },
+    "workspaceStrategy": {
+      "type": "string",
+      "enum": ["derive", "explicit", "none"],
+      "default": "derive"
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment / workspace name when using derive strategy."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

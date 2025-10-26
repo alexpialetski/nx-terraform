@@ -1,0 +1,24 @@
+{
+  "name": "aws-backend-1761486395506-70492",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/aws-backend-1761486395506-70492",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "terraform-init": {
+      "executor": "terraform:terraform-init"
+    },
+    "terraform-plan": {
+      "executor": "terraform:terraform-plan",
+      "dependsOn": ["terraform-init"]
+    },
+    "terraform-apply": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["terraform-plan"],
+      "options": {
+        "cwd": "packages/aws-backend-1761486395506-70492",
+        "command": "terraform apply -auto-approve tfplan"
+      }
+    }
+  }
+}

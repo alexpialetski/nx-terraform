@@ -1,0 +1,4 @@
+// Provider configuration
+
+provider "null" {}
+

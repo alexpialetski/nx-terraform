@@ -1,0 +1,13 @@
+{
+  
+  "title": "Add AWS Setup Project",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "description": "Project name (directory & Nx project)." },
+    "directory": { "type": "string", "description": "Optional custom directory (defaults to packages/<name>)." },
+    "bucketPrefix": { "type": "string", "description": "S3 bucket name prefix (e.g. tf-state-demo)", "default": "tf-state" },
+    "tags": { "type": "string", "description": "Comma separated tags for the project." }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}
