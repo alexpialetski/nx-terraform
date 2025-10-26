@@ -121,8 +121,8 @@ function addNxProject(tree: Tree, opts: NormalizedOptions) {
         dependsOn: ['terraform-plan'],
         defaultConfiguration: opts.envList[0],
         configurations: Object.fromEntries(
-          opts.envList.map(e => [e, { env: e }])
-        )
+          opts.envList.map((e) => [e, { env: e }])
+        ),
       },
       'terraform-destroy': {
         executor: 'nx:run-commands',

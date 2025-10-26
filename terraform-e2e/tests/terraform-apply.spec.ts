@@ -41,11 +41,14 @@ describe('terraform-apply executor', () => {
     // Apply should now fail with stale plan detection (because plan hash differs)
     let staleDetected = false;
     try {
-      execSync(`npx nx run ${projectName}:terraform-apply --configuration=dev`, {
-        cwd: workspaceRoot,
-        stdio: 'pipe',
-        env: process.env,
-      });
+      execSync(
+        `npx nx run ${projectName}:terraform-apply --configuration=dev`,
+        {
+          cwd: workspaceRoot,
+          stdio: 'pipe',
+          env: process.env,
+        }
+      );
     } catch (e: any) {
       const output = String(e.stdout) + String(e.stderr);
       if (/Stale plan detected/i.test(output)) staleDetected = true;

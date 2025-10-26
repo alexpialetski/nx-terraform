@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import { join, dirname } from 'path';
 import { mkdirSync, rmSync } from 'fs';
 
-describe('terraform', () => {
+describe('terraform plugin installation', () => {
   let projectDirectory: string;
 
   beforeAll(() => {

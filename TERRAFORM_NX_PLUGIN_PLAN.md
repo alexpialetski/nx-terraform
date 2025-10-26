@@ -313,6 +313,7 @@ All executors returning structured data will follow:
 ```
 
 ### 19.9 Short-Term TODOS (to be tracked separately)
+
 Status after initial implementation pass (✅ = completed):
 
 - ✅ Add `executors.json`
@@ -347,12 +348,14 @@ This adjustment section will evolve as soon as first executors land.
 ### 19.11 Current Implementation Snapshot
 
 Implemented Components:
+
 - Executors: `terraform-init`, `terraform-plan`
 - Utilities: command runner, hashing, artifact path creation, plan summary extraction
 - Tests: Deterministic hashing, change sensitivity, environment influence; plan summary counts & sensitive outputs
 - Return Contract: `terraform-plan` now emits `{ success, project, env, artifactDir, hash, planPath, summaryPath, changed }`
 
 Not Yet Implemented:
+
 - `terraform-apply`, `terraform-output`, `terraform-destroy`, `terraform-fmt` (plugin versions), `terraform-validate` (plugin version)
 - Generators (`add-project`, `init-workspace`, etc.)
 - Cost / security / drift / graph advanced executors
@@ -361,12 +364,17 @@ Not Yet Implemented:
 - Version alignment decision (Nx 21 root vs 22 plugin)
 
 ### 19.12 Immediate Next Steps (Proposed Ordering)
+
 1. Implement `terraform-apply` executor:
-  - Inputs: planPath (default: discover latest artifact hash for env)
-  - Guard: Verify plan hash matches recomputed inputs unless `--force`
-  - Output: success + applied hash
+
+- Inputs: planPath (default: discover latest artifact hash for env)
+- Guard: Verify plan hash matches recomputed inputs unless `--force`
+- Output: success + applied hash
+
 2. Implement `terraform-output` executor:
-  - Write `outputs.env` and `outputs.json` (redact sensitive values by default)
+
+- Write `outputs.env` and `outputs.json` (redact sensitive values by default)
+
 3. Add lightweight `add-project` generator (scaffold main.tf, variables.tf, outputs.tf, project.json wiring to plugin executors)
 4. Add `plan.meta.json` emission in plan executor (include terraformVersion, createdAt ISO timestamp, input file list)
 5. Implement `terraform-destroy` using existing patterns (reuse hashing for consistency but mark non-cacheable)
@@ -377,16 +385,19 @@ Not Yet Implemented:
 10. Add drift executor (reusing plan core) and finalize status codes mapping for CI gating.
 
 ### 19.13 Risk Adjustments After Progress
+
 - Hash correctness validated in tests → residual risk: large module trees performance (mitigation: future incremental hash caching)
 - Summary parse stable for basic actions → need extended test coverage for complex replace chains & moved resources
 - Version skew risk increased as more executors rely on devkit APIs; prioritize alignment before broad adoption.
 
 ### 19.14 Metrics to Add Later
+
 - Plan execution duration capture (ms) in `plan.meta.json`
 - File count hashed
 - Changed flag rationale (counts of create/update/delete/replace)
 
 ### 19.15 Definition of Done for Next Milestone
+
 - Apply & Output executors implemented + tested
 - One generator (`add-project`) functional
 - Documentation (README Quick Start) drafted
@@ -401,56 +412,77 @@ _Provide feedback on structure, missing concerns, or preferred priority adjustme
 
 ### 20.1 Newly Completed Since Original Plan
 
-| Area | Accomplishment |
-|------|----------------|
-| Executors | Implemented `terraform-apply` with stale plan hash guard (auto-discovers latest plan; rejects mismatch unless `--force`, test exercises mismatch) |
-| Executors | Enhanced `terraform-plan` to emit `plan.meta.json` (hash, terraformVersion, createdAt, durationMs, fileCount, summary & plan relative refs) |
-| Generators | Added `add-terraform-project` (generic, multi-env tfvars, provider selection, env-aware target configurations) |
-| Generators | Upgraded `add-aws-setup` to use real `terraform:terraform-apply` executor (replacing placeholder run-commands) |
-| Tests (E2E) | Added comprehensive plan artifact test (validates `tfplan`, `plan.json`, `summary.json`, `plan.meta.json`) |
-| Tests (E2E) | Added apply lifecycle test (plan → apply → mutate → stale detection → re-plan → apply) including dynamic removal of `dependsOn` to simulate stale scenario |
-| Tests (E2E) | Generator coverage: duplicate generation advisory, project configuration assertions, environment tfvars presence |
-| Hashing/Artifacts | Validated deterministic hash & artifact layout across multiple ephemeral projects; confirmed metadata and summary emission |
+| Area              | Accomplishment                                                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Executors         | Implemented `terraform-apply` with stale plan hash guard (auto-discovers latest plan; rejects mismatch unless `--force`, test exercises mismatch)          |
+| Executors         | Enhanced `terraform-plan` to emit `plan.meta.json` (hash, terraformVersion, createdAt, durationMs, fileCount, summary & plan relative refs)                |
+| Generators        | Added `add-terraform-project` (generic, multi-env tfvars, provider selection, env-aware target configurations)                                             |
+| Generators        | Upgraded `add-aws-setup` to use real `terraform:terraform-apply` executor (replacing placeholder run-commands)                                             |
+| Tests (E2E)       | Added comprehensive plan artifact test (validates `tfplan`, `plan.json`, `summary.json`, `plan.meta.json`)                                                 |
+| Tests (E2E)       | Added apply lifecycle test (plan → apply → mutate → stale detection → re-plan → apply) including dynamic removal of `dependsOn` to simulate stale scenario |
+| Tests (E2E)       | Generator coverage: duplicate generation advisory, project configuration assertions, environment tfvars presence                                           |
+| Hashing/Artifacts | Validated deterministic hash & artifact layout across multiple ephemeral projects; confirmed metadata and summary emission                                 |
 
 ### 20.2 Adjusted Remaining Scope
 
 The following items move from "planned" to "remaining" with clarified acceptance criteria:
 
 1. terraform-output executor
-  - Reads current state outputs (after apply) using `terraform output -json`.
-  - Produces `outputs.json` (raw JSON) and `outputs.env` (KEY=VALUE, redacting sensitive unless `--allowSensitive`).
-  - Writes into the existing artifact directory of the most recent matching plan hash (or creates a new hashless timestamped directory if no plan context available).
+
+- Reads current state outputs (after apply) using `terraform output -json`.
+- Produces `outputs.json` (raw JSON) and `outputs.env` (KEY=VALUE, redacting sensitive unless `--allowSensitive`).
+- Writes into the existing artifact directory of the most recent matching plan hash (or creates a new hashless timestamped directory if no plan context available).
+
 2. terraform-destroy executor
-  - Non-cacheable; uses `-auto-approve`.
-  - Optionally validates there is no unapplied newer plan hash (informational warning).
+
+- Non-cacheable; uses `-auto-approve`.
+- Optionally validates there is no unapplied newer plan hash (informational warning).
+
 3. terraform-fmt / terraform-validate executors
-  - Cacheable with namedInputs: `terraform-files`.
-  - Return structured `{ success, formattedChangedCount }` (fmt) and `{ success }` (validate).
+
+- Cacheable with namedInputs: `terraform-files`.
+- Return structured `{ success, formattedChangedCount }` (fmt) and `{ success }` (validate).
+
 4. Drift executor
-  - Reuses plan logic with a `--drift` flag; marks `summary.drift = true` only when resources show changes with no local file modifications (initial heuristic: compare current hash vs plan.meta hash; if equal but plan exit code=2 → drift).
+
+- Reuses plan logic with a `--drift` flag; marks `summary.drift = true` only when resources show changes with no local file modifications (initial heuristic: compare current hash vs plan.meta hash; if equal but plan exit code=2 → drift).
+
 5. Output redaction policy
-  - Implement basic sensitivity heuristic (keys containing `token|secret|password|key|cert` case-insensitive) added to plan summary `sensitiveOutputs`.
+
+- Implement basic sensitivity heuristic (keys containing `token|secret|password|key|cert` case-insensitive) added to plan summary `sensitiveOutputs`.
+
 6. README / Documentation
-  - Quick Start (init → plan → apply), artifact reference, stale plan guard explanation, adding environments, migrating from run-commands.
+
+- Quick Start (init → plan → apply), artifact reference, stale plan guard explanation, adding environments, migrating from run-commands.
+
 7. Version alignment decision
-  - Draft a short ADR: Option A upgrade root to Nx 22; Option B backport plugin to Nx 21. Include test matrix implications.
+
+- Draft a short ADR: Option A upgrade root to Nx 22; Option B backport plugin to Nx 21. Include test matrix implications.
+
 8. Dogfooding
-  - Replace `setup` & `cluster` project terraform targets with plugin executors on a feature branch; ensure CI viability.
+
+- Replace `setup` & `cluster` project terraform targets with plugin executors on a feature branch; ensure CI viability.
+
 9. add-project / init-workspace generators
-  - Separate from generic project: an opinionated minimal generator + workspace initializer that injects namedInputs / targetDefaults if absent.
+
+- Separate from generic project: an opinionated minimal generator + workspace initializer that injects namedInputs / targetDefaults if absent.
+
 10. terraform-show executor
-   - Make existing plan JSON extraction callable standalone (given `--planFile`).
+
+- Make existing plan JSON extraction callable standalone (given `--planFile`).
+
 11. Optional integrations scaffolding hooks
-   - Stub config in `.terraform-nx.json` & no-op hooks for future cost/security.
+
+- Stub config in `.terraform-nx.json` & no-op hooks for future cost/security.
 
 ### 20.3 Updated Risk Landscape
 
-| Risk | Change | Mitigation |
-|------|--------|------------|
-| Version skew (Nx 21 vs 22) | Higher impact now that apply executor may be dogfooded | Prioritize ADR + alignment before broad adoption |
-| Stale plan false negatives | Reduced: hash guard in place | Add unit test around hash function edge cases (symlink, large module) |
-| Test flakiness | One apply test flagged flaky by Nx (replace action) | Pin null_resource trigger or suppress replacement by anchoring a static trigger value; evaluate before CI integration |
-| Performance on large repos | Unknown | Future enhancement: incremental hashing cache file per project |
+| Risk                       | Change                                                 | Mitigation                                                                                                            |
+| -------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Version skew (Nx 21 vs 22) | Higher impact now that apply executor may be dogfooded | Prioritize ADR + alignment before broad adoption                                                                      |
+| Stale plan false negatives | Reduced: hash guard in place                           | Add unit test around hash function edge cases (symlink, large module)                                                 |
+| Test flakiness             | One apply test flagged flaky by Nx (replace action)    | Pin null_resource trigger or suppress replacement by anchoring a static trigger value; evaluate before CI integration |
+| Performance on large repos | Unknown                                                | Future enhancement: incremental hashing cache file per project                                                        |
 
 ### 20.4 Metrics & Telemetry TODO
 
@@ -460,6 +492,7 @@ The following items move from "planned" to "remaining" with clarified acceptance
 ### 20.5 Immediate Next Session Starting Points
 
 Recommended order to resume:
+
 1. Implement `terraform-output` executor (unblocks env consumption pattern).
 2. Implement `terraform-fmt` & `terraform-validate` (quick wins; raise confidence & caching examples).
 3. Draft README Quick Start using newly implemented executors.
@@ -469,6 +502,7 @@ Recommended order to resume:
 ### 20.6 Current Definition of Done (Revised)
 
 Phase 1 completion now requires (remaining subset):
+
 - Output, fmt, validate, destroy executors implemented + tested.
 - README Quick Start + Stale Plan Guard section.
 - ADR on version alignment merged.
@@ -487,4 +521,5 @@ Phase 1 completion now requires (remaining subset):
 `outputs.env` / `outputs.json` will be added once the output executor is implemented.
 
 ---
+
 _Progress section appended on 2025-10-26 to guide next implementation session._

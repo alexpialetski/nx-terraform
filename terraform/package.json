@@ -6,6 +6,12 @@
   "types": "./src/index.d.ts",
   "generators": "./generators.json",
   "executors": "./executors.json",
+  "keywords": [
+    "nx",
+    "terraform",
+    "plugin",
+    "infrastructure"
+  ],
   "dependencies": {
     "tslib": "^2.3.0",
     "@nx/devkit": "22.0.1",

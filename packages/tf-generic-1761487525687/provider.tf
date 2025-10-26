@@ -1,4 +1,0 @@
-// Provider configuration
-
-provider "null" {}
-
