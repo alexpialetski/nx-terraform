@@ -1,64 +1,44 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
 import {
   uniqueName,
   getWorkspaceRoot,
   ensureTerraformInit,
   mutateTerraformFile,
+  runCLI,
+  runTerraformExecutor,
 } from './utils/e2e-helpers';
 
 describe('terraform-executor-destroy', () => {
   const projectName = uniqueName('destroyproj');
 
   beforeAll(() => {
-    const root = getWorkspaceRoot();
-    execSync(
-      `npx nx g terraform:add-terraform-project --name=${projectName} --envs=dev --provider=null`,
-      {
-        cwd: root,
-        stdio: 'inherit',
-        env: { ...process.env, NX_DAEMON: 'false' },
-      }
+    runCLI(
+      `generate terraform:add-terraform-project --name=${projectName} --envs=dev --provider=null`
     );
   }, 120000);
 
   it('applies infrastructure then destroys with drift warning after mutation', async () => {
     const root = getWorkspaceRoot();
-    const planExecutor = require(path.join(
-      root,
-      'dist/terraform/src/executors/terraform-plan/executor.js'
-    )).default;
-    const applyExecutor = require(path.join(
-      root,
-      'dist/terraform/src/executors/terraform-apply/executor.js'
-    )).default;
-    const destroyExecutor = require(path.join(
-      root,
-      'dist/terraform/src/executors/terraform-destroy/executor.js'
-    )).default;
-    const context = {
-      projectName,
-      root,
-      cwd: root,
-      projectsConfigurations: {
-        version: 2,
-        projects: { [projectName]: { root: `packages/${projectName}` } },
-      },
-    } as any;
-
     ensureTerraformInit(projectName);
 
     // Plan & apply
-    const planRes = await planExecutor(
-      { env: 'dev', workspaceStrategy: 'none' },
-      context
-    );
+    const planRes = await runTerraformExecutor(projectName, 'terraform-plan', {
+      env: 'dev',
+      workspaceStrategy: 'none',
+    });
+
     expect(planRes.success).toBe(true);
-    const applyRes = await applyExecutor(
-      { env: 'dev', workspaceStrategy: 'none' },
-      context
+
+    const applyRes = await runTerraformExecutor(
+      projectName,
+      'terraform-apply',
+      {
+        env: 'dev',
+        workspaceStrategy: 'none',
+      }
     );
+
     expect(applyRes.success).toBe(true);
 
     // Confirm state contains resource reference
@@ -69,16 +49,20 @@ describe('terraform-executor-destroy', () => {
       'terraform.tfstate'
     );
     expect(fs.existsSync(statePath)).toBe(true);
+
     const stateBefore = fs.readFileSync(statePath, 'utf-8');
+
     expect(stateBefore).toMatch(/null_resource/);
 
     // Mutate code to create hash divergence for warning
     mutateTerraformFile(projectName, 'main.tf', '# drift-intent');
 
-    const destroyRes = await destroyExecutor(
-      { env: 'dev', workspaceStrategy: 'none' },
-      context
+    const destroyRes = await runTerraformExecutor(
+      projectName,
+      'terraform-destroy',
+      { env: 'dev', workspaceStrategy: 'none' }
     );
+
     expect(destroyRes.success).toBe(true);
     // Warning likely present due to mutation (non-fatal)
     expect(Array.isArray(destroyRes.warnings)).toBe(true);

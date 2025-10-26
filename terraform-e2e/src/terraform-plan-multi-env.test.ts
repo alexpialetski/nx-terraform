@@ -1,10 +1,11 @@
-import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
   uniqueName,
   getWorkspaceRoot,
   ensureTerraformInit,
+  runCLI,
+  runTerraformExecutor,
 } from './utils/e2e-helpers';
 
 /**
@@ -12,40 +13,28 @@ import {
  */
 describe('terraform-plan multi-env isolation', () => {
   const projectName = uniqueName('tf-multi');
+
   it('creates distinct artifact dirs per environment (dev vs qa)', async () => {
     const root = getWorkspaceRoot();
-    execSync(
-      `npx nx g terraform:add-terraform-project --name=${projectName} --envs=dev,qa --provider=null`,
-      {
-        cwd: root,
-        stdio: 'inherit',
-        env: { ...process.env, NX_DAEMON: 'false' },
-      }
-    );
 
-    const planExecutor = require(path.join(
-      root,
-      'dist/terraform/src/executors/terraform-plan/executor.js'
-    )).default;
-    const context = {
-      projectName,
-      root,
-      projectsConfigurations: {
-        version: 2,
-        projects: { [projectName]: { root: `packages/${projectName}` } },
-      },
-    } as any;
+    runCLI(
+      `generate terraform:add-terraform-project --name=${projectName} --envs=dev,qa --provider=null`
+    );
 
     ensureTerraformInit(projectName);
-    const planDev = await planExecutor(
-      { env: 'dev', workspaceStrategy: 'none' },
-      context
-    );
+
+    const planDev = await runTerraformExecutor(projectName, 'terraform-plan', {
+      env: 'dev',
+      workspaceStrategy: 'none',
+    });
+
     expect(planDev.success).toBe(true);
-    const planQa = await planExecutor(
-      { env: 'qa', workspaceStrategy: 'none' },
-      context
-    );
+
+    const planQa = await runTerraformExecutor(projectName, 'terraform-plan', {
+      env: 'qa',
+      workspaceStrategy: 'none',
+    });
+
     expect(planQa.success).toBe(true);
 
     const baseDev = path.join(root, '.nx', 'terraform', projectName, 'dev');

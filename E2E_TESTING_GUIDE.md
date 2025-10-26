@@ -9,7 +9,7 @@
 - **Isolate every test run**: Create a fresh throwaway workspace (`newProject(...)`) per `describe` block or per test suite.
 - **Assert observable behavior, not implementation**: Check generated files, command outputs, side‑effects inside `dist/`, runtime execution.
 - **Prefer official helpers** from `@nx/e2e-utils` over home‑grown shell scripting to reduce flakes.
-- **Deterministic uniqueness**: Use `uniq(prefix)` for project names to avoid collisions between parallel / cached runs.
+- **Deterministic uniqueness**: Use `uniqueName(prefix)` for project names to avoid collisions between parallel / cached runs. (Legacy `uniq` helper consolidated into `uniqueName`.)
 - **Keep tests fast but realistic**: Build only what you later assert. Avoid over‑generating.
 - **Explicit module format / environment** when relevant (CJS vs ESM, watch mode, batch mode) to surface subtle regressions early.
 
@@ -40,7 +40,7 @@ For Nx core plugins you pass the list (e.g. `['@nx/node', '@nx/js']`). For `nx-t
 | --------------------------------------- | ------------------------------------------------------------------------- | -------------------------- |
 | `newProject(opts)`                      | Initialize ephemeral workspace with optional packages / preset.           |
 | `cleanupProject()`                      | Remove temp workspace.                                                    |
-| `uniq(prefix)`                          | Generate collision‑free project names.                                    |
+| `uniqueName(prefix)`                    | Generate collision‑free project names (supersedes legacy `uniq`).         |
 | `runCLI(cmd, options?)`                 | Synchronous Nx command (throws on non‑zero exit unless `silenceError`).   |
 | `runCLIAsync(cmd)`                      | Async variant; exposes combined output & status.                          |
 | `runCommand(cmd)`                       | Arbitrary shell command (npm/pnpm/yarn/node).                             |
@@ -120,8 +120,8 @@ Use `describe.each` when validating identical executor behavior across permutati
 - [x] Consolidate all existing specs into `src/`
 - [x] Rename to `<domain>-<category>-<feature>.test.ts`
 - [x] Introduce `src/utils/e2e-helpers.ts` for shared routines
-- [ ] Future: Add dedicated hash determinism test (`terraform-executor-plan-hash-determinism.test.ts`)
-- [ ] Future: Add outputs test (`terraform-executor-output.test.ts`)
+- [x] Add dedicated hash determinism test (`terraform-executor-plan-hash-determinism.test.ts`)
+- [x] Add outputs test (`terraform-executor-output.test.ts`)
 
 ### 4.8 Avoiding Duplication
 
@@ -345,7 +345,7 @@ Recommendation: Provide a `jest.preset.e2e.js` for `nx-terraform` E2E with:
 ## 21. Authoring a New E2E Test (Template)
 
 ```ts
-import { newProject, cleanupProject, uniq, runCLI, checkFilesExist, updateJson, readJson } from '@nx/e2e-utils';
+import { newProject, cleanupProject, uniqueName, runCLI, checkFilesExist, updateJson, readJson } from '@nx/e2e-utils';
 
 describe('terraform:plan executor', () => {
   let envProj: string;
@@ -355,7 +355,7 @@ describe('terraform:plan executor', () => {
   afterAll(() => cleanupProject());
 
   it('should generate env and produce a plan', () => {
-    envProj = uniq('tf-env');
+    envProj = uniqueName('tf-env');
     runCLI(`generate @proj/terraform:environment ${envProj} --region=us-east-1`);
 
     checkFilesExist(`packages/${envProj}/main.tf`, `packages/${envProj}/variables.tf`);
@@ -409,7 +409,7 @@ describe('terraform:plan executor', () => {
 ## 25. Quick Checklist (Copy-Paste Before Writing a Test)
 
 - [ ] Fresh workspace via `newProject`.
-- [ ] Unique names with `uniq`.
+- [ ] Unique names with `uniqueName`.
 - [ ] Generator executed.
 - [ ] Minimal file existence assertions.
 - [ ] Target modifications through `updateJson`.
@@ -427,7 +427,7 @@ describe('terraform:plan executor', () => {
 | Pitfall                                        | Avoidance                                                               |
 | ---------------------------------------------- | ----------------------------------------------------------------------- |
 | Race conditions on serve                       | Use `runCommandUntil` with clear output predicate.                      |
-| Hard-coded names causing conflicts             | Always wrap with `uniq()`.                                              |
+| Hard-coded names causing conflicts             | Always wrap with `uniqueName()`.                                        |
 | Overly broad assertions on full console output | Assert substrings/semantics only.                                       |
 | Flaky dependency versions                      | Pin versions in test setup (e.g., explicitly install expected version). |
 | Silent failures when editing JSON              | Always `return config` from `updateJson` mutator.                       |
@@ -461,145 +461,119 @@ From `e2e-example`: `js-*/*.test.ts`, `js-generators.ts`, `jest.config.ts`, `pro
 
 ---
 
-## 30. Direct Executor Invocation Pattern (Current terraform-e2e Approach)
+## 30. Executor Abstraction (`runTerraformExecutor`)
 
-While Section 2 describes the canonical Nx plugin E2E style (ephemeral throwaway workspaces + `runCLI`), the current `terraform-e2e` suite inside this monorepo adopts a hybrid pattern: it exercises executor logic by importing the executor implementation directly and constructing a minimal `ExecutorContext`. This was introduced to solve two concrete issues:
-
-| Problem                                                                           | Symptoms                                                                      | Classic CLI Attempt                                          | Direct Invocation Benefit                                                          |
-| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Dynamic project creation not visible to cached project graph                      | `nx run <proj>:terraform-plan` failed with "project not found" or stale graph | Forcing daemon off & invalidating cache still racy           | Bypasses graph resolution; we provide the project config inline                    |
-| Hash / artifact path assertions brittle due to root mis-detection                 | Tests failed to locate `.nx/terraform/...` directories                        | Relied on relative paths anchored to test file               | `getWorkspaceRoot()` upward walk anchors all paths reliably                        |
-| Terraform plan/apply stale detection interfering with sequential apply assertions | Apply failed: "Stale plan detected"                                           | Needed a second CLI round trip & stateful plan file tracking | Direct call surfaces return object (e.g. `{ success, stale }`) for clear branching |
-
-### 30.1 Pattern Overview
+The earlier direct-import pattern (manually requiring each executor and crafting a bespoke `ExecutorContext`) has been replaced with a lightweight abstraction provided by `e2e-helpers.ts`.
 
 ```ts
-import planExecutor from '../../terraform/src/executors/terraform-plan/executor';
-import applyExecutor from '../../terraform/src/executors/terraform-apply/executor';
-import { ensureTerraformInit, getWorkspaceRoot } from './utils/e2e-helpers';
+import { runTerraformExecutor, uniqueName, ensureTerraformInit } from './utils/e2e-helpers';
 
-it('plans via direct executor', async () => {
+it('plans using abstraction', async () => {
   const projectName = uniqueName('tf-plan');
-  // generator invoked beforehand to scaffold project
+  // (Generator invocation omitted for brevity)
   ensureTerraformInit(projectName);
-  const context: any = {
-    root: getWorkspaceRoot(),
-    projectName,
-    cwd: getWorkspaceRoot(),
-    projectsConfigurations: {
-      version: 2,
-      projects: {
-        [projectName]: {
-          root: `packages/${projectName}`,
-          name: projectName,
-          targets: {},
-        },
-      },
-    },
-    projectGraph: { nodes: {}, dependencies: {} },
-    workspace: { version: 2, projects: {} },
-    isVerbose: false,
-  };
-  const res = await planExecutor({ env: 'dev', workspaceStrategy: 'none' }, context);
+  const res = await runTerraformExecutor(projectName, 'terraform-plan', {
+    env: 'dev',
+    workspaceStrategy: 'none',
+  });
   expect(res.success).toBe(true);
 });
 ```
 
-### 30.2 Constructing Minimal ExecutorContext
+### 30.1 Responsibilities
 
-Only a subset of fields are required by current executors:
+`runTerraformExecutor(projectName, executorFolderName, options)`:
+
+- Lazily loads and caches the built executor from `dist/terraform/src/executors/<executorFolderName>/executor.js`.
+- Constructs a minimal context (root, projectName, project root mapping) per invocation.
+- Returns the executor's structured result (e.g. `{ success, stale }`).
+
+### 30.2 Minimal Context Contract
+
+Executors currently rely only on:
 
 - `root` (workspace root)
 - `projectName`
-- (Optionally) `projectsConfigurations.projects[projectName].root` for logging / relative path joins
-- `isVerbose` (optional; default false)
+- `projectsConfigurations.projects[projectName].root`
 
-Everything else may be stubbed (`projectGraph`, `workspace`). Keep it intentionally minimal to reduce fixture drift.
+Extend the helper centrally if an executor begins needing additional context fields.
 
-### 30.3 `ensureTerraformInit` Helper
+### 30.3 Hash / Artifact Assertions
 
-Centralizes a guarded `terraform init` call. It checks for `.terraform.lock.hcl` and `.terraform/` before invoking init, eliminating duplicate retry logic across tests and fixing earlier inconsistent provider lock errors.
+Artifact paths under `.nx/terraform/<project>/<env>/<hash>/` are inspected after running the executor. Tests assert environment isolation and (for unchanged sources) stable hash reuse.
 
-```ts
-export function ensureTerraformInit(projectName: string) {
-  const projectRoot = path.join(getWorkspaceRoot(), 'packages', projectName);
-  if (!fs.existsSync(path.join(projectRoot, '.terraform.lock.hcl'))) {
-    execSync('terraform init', { cwd: projectRoot, stdio: 'inherit' });
-  }
-}
-```
+### 30.4 Stale Plan & Force Apply Logic
 
-### 30.4 Stale Plan Detection & Force Apply
+Apply executor semantics via abstraction:
 
-The apply executor records a hash of Terraform source inputs in `plan.meta.json`. If the hash differs between planning time and apply time:
+- Unchanged apply after plan: `{ success: true, stale: false }`
+- Apply after source mutation without re-plan: `{ success: false, stale: true }`
+- Forced apply after mutation (`force:true`): `{ success: true, stale: true }`
 
-- Without `force`: executor returns `{ success:false, stale:true }` and logs an error.
-- With `force:true`: executor proceeds and returns `{ success:true, stale:true }` allowing intentional apply after drift.
+### 30.5 Multi-Environment Isolation
 
-Test pattern:
+Distinct `env` values generate separate artifact directories; `env` participates in hash derivation.
 
-1. Plan → capture meta hash.
-2. Mutate `main.tf` (append comment) → re-hash differs.
-3. Attempt apply (expect stale failure).
-4. Re-plan OR apply with `force:true` (depending on scenario under test).
+### 30.6 Legacy Direct Pattern Removed
 
-### 30.5 Multi-Environment Artifact Isolation
+All specs now route through `runTerraformExecutor`; no direct `dist/...` imports remain.
 
-`terraform-plan` writes artifacts to:
+### 30.7 When to Prefer CLI Tests
 
-```
-.nx/terraform/<project>/<env>/<hash>/
-  tfplan
-  plan.json
-  summary.json
-  plan.meta.json
-```
+Add/retain CLI-based tests if validating:
 
-The multi-env test calls plan twice with different `env` values (`dev`, `qa`) and asserts both directories exist and (typically) different hashes. Hashes differ even with identical code because environment name participates in the hash input set.
+- Task graph & caching semantics
+- Affected project detection
+- Batch mode behavior
 
-### 30.6 Removed Legacy Helper
+### 30.8 Pros / Cons
 
-`scaffoldMinimalProject()` was removed after migrating fully to official generators. This reduces parallel scaffolding logic and keeps project layout single-sourced.
+| Pros                                       | Cons                                                             |
+| ------------------------------------------ | ---------------------------------------------------------------- |
+| Eliminates repetitive context boilerplate  | Bypasses full project graph & caching behavior                   |
+| Central upgrade point for future context   | Requires build step before invocation (`nx run terraform:build`) |
+| Direct structured results (no log parsing) | Slight divergence from real CLI runtime path                     |
 
-### 30.7 When NOT to Use Direct Invocation
+Mitigation: Periodic CLI smoke tests if executor surface widens.
 
-Prefer the canonical CLI + ephemeral workspace style when:
+## 31. Updated Migration & Coverage Checklist (2025-10-26)
 
-- You need to validate task graph behavior, caching, or batch processing.
-- The executor relies on Nx project graph inputs (implicit deps, named inputs) rather than only local filesystem operations.
+Current status:
 
-Use direct invocation when:
-
-- Graph staleness or daemon behavior introduces flakiness for rapidly-created throwaway projects inside the same repo.
-- You require fine-grained inspection of executor return values (`stale`, timings, custom fields) without parsing console output.
-
-### 30.8 Pros / Cons Summary
-
-| Pros                                    | Cons                                                     |
-| --------------------------------------- | -------------------------------------------------------- |
-| Faster feedback (no full graph rebuild) | Slightly diverges from real CLI integration path         |
-| Deterministic: bypasses daemon caching  | Must manually keep minimal context shape updated         |
-| Direct access to structured result      | Misses detection of misconfigured `project.json` targets |
-
-Mitigation: Maintain at least one higher-level integration test (CLI run) if future executors depend on graph semantics.
-
-## 31. Updated Migration Checklist Status (2025-10-26)
-
-Additional items realized since original draft:
-
-- [x] Stale plan detection test coverage (within apply executor test)
+- [x] Stale plan detection coverage (apply executor test)
 - [x] Force apply coverage (`terraform-executor-apply-force.test.ts`)
-- [x] Multi-environment plan isolation (`terraform-plan-multi-env.test.ts`)
+- [x] Multi-environment plan isolation (`terraform-executor-plan-multi-env.test.ts`)
 - [x] Centralized Terraform init logic (`ensureTerraformInit`)
 - [x] Removal of redundant manual scaffolding helper
-- [ ] Hash determinism focused test (still pending; will compare repeated plan on unchanged code)
-- [ ] Outputs consumer test (machine-read plan summary consumption)
+- [x] Hash determinism focused test (`terraform-executor-plan-hash-determinism.test.ts`)
+- [x] Outputs consumer test (`terraform-executor-output.test.ts`)
+- [x] Executor abstraction (`runTerraformExecutor`) adopted globally
+- [x] Unique naming helper consolidation (`uniqueName`)
+- [ ] (Future) Re-enable network/npm installation tests under env guard
+
+### 31.1 Skipped / Deferred Tests
+
+Currently skipped for deterministic CI:
+
+- `terraform-plugin-installation.test.ts`
+- `terraform.spec.ts`
+
+Re-enable pattern:
+
+```ts
+const runNetwork = process.env.RUN_NETWORK_E2E === '1';
+(runNetwork ? describe : describe.skip)('terraform plugin installation', () => {
+  /* ... */
+});
+```
+
+Opt-in locally: `RUN_NETWORK_E2E=1 npx nx test terraform-e2e`.
 
 ## 32. Changelog
 
-| Date       | Change                                                                                                                                                        |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2025-10-26 | Added Sections 30–32 (direct executor invocation, checklist status, changelog). Removed legacy helper reference. Documented stale/force & multi-env patterns. |
+| Date       | Change                                                                                                                                                                                             |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2025-10-26 | Added executor abstraction (Section 30); updated checklist (Section 31) marking hash determinism & outputs tests complete; consolidated naming helper; documented skip strategy for network tests. |
 
 ### Final Note
 
