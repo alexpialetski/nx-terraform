@@ -1,0 +1,14 @@
+{
+  "name": "create-nx-terraform-app",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "create-nx-workspace": "22.0.2",
+    "tslib": "^2.3.0"
+  },
+  "bin": {
+    "create-nx-terraform-app": "./bin/index.js"
+  }
+}
