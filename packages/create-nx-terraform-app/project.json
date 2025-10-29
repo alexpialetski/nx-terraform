@@ -1,0 +1,42 @@
+{
+  "name": "create-nx-terraform-app",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/create-nx-terraform-app/bin",
+  "projectType": "library",
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/create-nx-terraform-app",
+        "main": "packages/create-nx-terraform-app/bin/index.ts",
+        "tsConfig": "packages/create-nx-terraform-app/tsconfig.lib.json",
+        "assets": ["packages/create-nx-terraform-app/*.md"]
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/create-nx-terraform-app/jest.config.ts"
+      }
+    }
+  },
+  "implicitDependencies": ["nx-terraform"]
+}
