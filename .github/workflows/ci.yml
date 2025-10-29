@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v*.*.*
   pull_request:
 
 permissions:
@@ -30,12 +32,22 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          id-token: write # needed for provenance data generation
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      # - run: npx nx-cloud record -- echo Hello World
-      - run: npx nx run-many -t lint test build
+      - name: Quality gates
+        run: npx nx run-many -t lint test build
+
+      - name: Publish packages
+        if: startsWith(github.ref, 'refs/tags/')
+        run: npx nx release publish
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: npx nx fix-ci
         if: always()
