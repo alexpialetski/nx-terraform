@@ -4,7 +4,7 @@
     "outDir": "../../dist/out-tsc",
     "declaration": true,
     "types": ["node"],
-    "rootDir": "."
+    "rootDir": "bin"
   },
   "include": ["src/**/*.ts", "bin/**/*.ts"],
   "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]

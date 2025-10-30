@@ -6,9 +6,13 @@
   "private": true,
   "dependencies": {
     "@nx/devkit": "22.0.2",
-    "create-nx-workspace": "22.0.2"
+    "create-nx-workspace": "22.0.2",
+    "enquirer": "~2.3.6",
+    "picocolors": "^1.1.1",
+    "yargs": "^17.6.2"
   },
   "devDependencies": {
+    "@cdktf/hcl2json": "^0.21.0",
     "@eslint/js": "^9.8.0",
     "@nx/eslint": "22.0.2",
     "@nx/eslint-plugin": "22.0.2",
@@ -40,5 +44,6 @@
   },
   "nx": {
     "includedScripts": []
-  }
+  },
+  "generators": "./generators.json"
 }

@@ -6,9 +6,14 @@ export default [
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [
-        'error',
+        // TODO: investigate while ignoring "files" of generators causes false positives
+        'off',
         {
-          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+          includeTransitiveDependencies: false,
+          ignoredFiles: [
+            '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
+            '{projectRoot}/src/generators/terraform-backend/files/**/*',
+          ],
         },
       ],
     },

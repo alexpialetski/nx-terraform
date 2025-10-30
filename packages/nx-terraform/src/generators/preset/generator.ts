@@ -1,25 +1,23 @@
-import {
-  addProjectConfiguration,
-  formatFiles,
-  generateFiles,
-  Tree,
-} from '@nx/devkit';
-import * as path from 'path';
+import { formatFiles, runTasksInSerial, Tree } from '@nx/devkit';
+
 import { PresetGeneratorSchema } from './schema';
+import { terraformBackendGenerator } from '../terraform-backend/terraform-backend';
 
 export async function presetGenerator(
   tree: Tree,
   options: PresetGeneratorSchema
 ) {
-  const projectRoot = `libs/${options.name}`;
-  addProjectConfiguration(tree, options.name, {
-    root: projectRoot,
-    projectType: 'library',
-    sourceRoot: `${projectRoot}/src`,
-    targets: {},
+  const tasks = [];
+
+  // Scaffold terraform backend project
+  await terraformBackendGenerator(tree, {
+    name: 'terraform-setup',
+    backendType: options.backendType,
   });
-  generateFiles(tree, path.join(__dirname, 'files'), projectRoot, options);
+
   await formatFiles(tree);
+
+  return runTasksInSerial(...tasks);
 }
 
 export default presetGenerator;

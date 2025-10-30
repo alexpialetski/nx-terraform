@@ -1,0 +1,9 @@
+{
+  "generators": {
+    "terraform-backend": {
+      "factory": "./packages/nx-terraform/src/generators/terraform-backend/terraform-backend",
+      "schema": "./packages/nx-terraform/src/generators/terraform-backend/schema.json",
+      "description": "terraform-backend generator"
+    }
+  }
+}

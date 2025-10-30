@@ -1,18 +1,33 @@
 {
-  "$schema": "https://json-schema.org/schema",
-  "$id": "Preset",
-  "title": "",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "NxTerraformPreset",
+  "title": "Nx Terraform preset",
+  "description": "Initializes a workspace with a Terraform backend project configured via nx-terraform preset.",
   "type": "object",
   "properties": {
-    "name": {
+    "projectName": {
       "type": "string",
-      "description": "",
+      "description": "Name of the initial Terraform backend project.",
+      "aliases": ["name"],
       "$default": {
         "$source": "argv",
         "index": 0
       },
-      "x-prompt": "What name would you like to use?"
+      "x-prompt": "What project name would you like to use?"
+    },
+    "backendType": {
+      "type": "string",
+      "description": "Terraform backend type to scaffold (aws-s3 or local).",
+      "enum": ["aws-s3", "local"],
+      "x-prompt": {
+        "message": "Select Terraform backend type",
+        "type": "list",
+        "items": [
+          { "value": "aws-s3", "label": "AWS S3 remote backend" },
+          { "value": "local", "label": "Local backend" }
+        ]
+      }
     }
   },
-  "required": ["name"]
+  "required": ["projectName", "backendType"]
 }
