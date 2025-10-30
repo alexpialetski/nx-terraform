@@ -16,7 +16,7 @@ describe('create-nx-terraform-app', () => {
   });
 
   it('should be installed', () => {
-    projectDirectory = createTestProject();
+    projectDirectory = createTestProject('--backendType=local');
 
     // npm ls will fail if the package is not installed properly
     execSync('npm ls nx-terraform', {

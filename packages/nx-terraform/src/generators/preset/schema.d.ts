@@ -1,3 +1,4 @@
 export interface PresetGeneratorSchema {
-  name: string;
+  projectName: string;
+  backendType: 'aws-s3' | 'local';
 }

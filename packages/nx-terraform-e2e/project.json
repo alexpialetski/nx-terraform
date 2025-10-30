@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "packages/nx-terraform-e2e/src",
-  "implicitDependencies": ["nx-terraform"],
+  "implicitDependencies": ["nx-terraform", "create-nx-terraform-app"],
   "targets": {
     "e2e": {
       "executor": "@nx/jest:jest",

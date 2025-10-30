@@ -5,6 +5,11 @@
       "schema": "./src/generators/preset/schema.json",
       "description": "preset generator",
       "x-use-standalone-layout": true
+    },
+    "terraform-backend": {
+      "factory": "./src/generators/terraform-backend/terraform-backend",
+      "schema": "./src/generators/terraform-backend/schema.json",
+      "description": "terraform-backend generator"
     }
   }
 }

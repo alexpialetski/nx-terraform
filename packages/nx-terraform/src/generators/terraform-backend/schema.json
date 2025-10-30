@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "TerraformBackend",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use?"
+    },
+    "backendType": {
+      "type": "string",
+      "description": "Type of Terraform backend to generate (aws-s3 or local).",
+      "enum": ["aws-s3", "local"],
+      "x-prompt": {
+        "message": "Which Terraform backend type?",
+        "type": "list",
+        "items": [
+          { "value": "aws-s3", "label": "AWS S3 remote backend" },
+          { "value": "local", "label": "Local backend (local state files)" }
+        ]
+      }
+    },
+    "bucketNamePrefix": {
+      "type": "string",
+      "description": "Optional prefix for derived bucket name (aws-s3). Default: tf-rs-school-",
+      "minLength": 3,
+      "pattern": "^[a-z0-9][a-z0-9.-]{1,30}$",
+      "x-prompt": "(Optional) Prefix for bucket name? Leave blank for tf-rs-school-"
+    }
+  },
+  "required": ["name", "backendType"]
+}
