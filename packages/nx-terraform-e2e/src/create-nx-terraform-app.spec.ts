@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { join, dirname } from 'path';
-import { mkdirSync, rmSync } from 'fs';
+import { mkdirSync, rmSync, readFileSync, existsSync } from 'fs';
 
 describe('create-nx-terraform-app', () => {
   let projectDirectory: string;
@@ -15,7 +15,7 @@ describe('create-nx-terraform-app', () => {
     }
   });
 
-  it('should be installed', () => {
+  test('end to end flow', () => {
     projectDirectory = createTestProject('--backendType=local');
 
     // npm ls will fail if the package is not installed properly
@@ -23,6 +23,32 @@ describe('create-nx-terraform-app', () => {
       cwd: projectDirectory,
       stdio: 'inherit',
     });
+
+    const backendProject = JSON.parse(
+      execSync('nx show project terraform-setup --json', {
+        cwd: projectDirectory,
+      }).toString()
+    );
+
+    expect(backendProject).toMatchSnapshot();
+
+    execSync('nx run terraform-setup:terraform-apply', {
+      cwd: projectDirectory,
+      stdio: 'inherit',
+    });
+    expect(
+      existsSync(
+        projectDirectory + '/packages/terraform-setup/terraform.tfstate'
+      )
+    ).toBeTruthy();
+    expect(
+      readFileSync(
+        projectDirectory + '/packages/terraform-setup/backend.config',
+        'utf-8'
+      )
+    ).toMatch(
+      `path = "${projectDirectory}/packages/terraform-setup/terraform.tfstate`
+    );
   });
 });
 

@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  TERRAFORM_VERSION: '~1.8.0'
+
 on:
   push:
     branches:
@@ -42,6 +45,11 @@ jobs:
 
       - name: Quality gates
         run: npx nx run-many -t lint test build
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: E2E Tests
         run: npx nx run-many -t e2e

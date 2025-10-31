@@ -1,5 +1,5 @@
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
-import { readProjectConfiguration } from '@nx/devkit';
+import { readNxJson, readProjectConfiguration } from '@nx/devkit';
 
 import { presetGenerator } from './generator';
 import { PresetGeneratorSchema } from './schema';
@@ -17,5 +17,14 @@ describe('preset generator', () => {
 
     const config = readProjectConfiguration(tree, 'terraform-setup');
     expect(config).toBeDefined();
+
+    expect(readNxJson(tree).plugins).toEqual(
+      expect.arrayContaining([
+        {
+          plugin: 'nx-terraform',
+          options: {},
+        },
+      ])
+    );
   });
 });

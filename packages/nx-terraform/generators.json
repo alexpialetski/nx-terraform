@@ -10,6 +10,11 @@
       "factory": "./src/generators/terraform-backend/terraform-backend",
       "schema": "./src/generators/terraform-backend/schema.json",
       "description": "terraform-backend generator"
+    },
+    "init": {
+      "factory": "./src/generators/init/init",
+      "schema": "./src/generators/init/schema.json",
+      "description": "init generator"
     }
   }
 }
