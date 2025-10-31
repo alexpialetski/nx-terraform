@@ -1,0 +1,243 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`create-nx-terraform-app end to end flow 1`] = `
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "implicitDependencies": [],
+  "metadata": {
+    "js": {
+      "isInPackageManagerWorkspaces": false,
+      "packageName": "terraform-setup",
+      "packageVersion": "0.1.0",
+    },
+    "targetGroups": {
+      "NPM Scripts": [
+        "clean",
+      ],
+    },
+  },
+  "name": "terraform-setup",
+  "projectType": "application",
+  "root": "packages/terraform-setup",
+  "sourceRoot": "packages/terraform-setup",
+  "tags": [
+    "npm:private",
+  ],
+  "targets": {
+    "clean": {
+      "configurations": {},
+      "executor": "nx:run-script",
+      "metadata": {
+        "runCommand": "npm run clean",
+        "scriptContent": "rimraf terraform.tfstate.d tfplan",
+      },
+      "options": {
+        "script": "clean",
+      },
+      "parallelism": true,
+    },
+    "terraform-apply": {
+      "cache": true,
+      "configurations": {},
+      "dependsOn": [
+        "terraform-plan",
+      ],
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{projectRoot}/*.tf",
+        "{projectRoot}/**/*.tf",
+        "{projectRoot}/templates/*",
+        "{projectRoot}/tfvars/*",
+        {
+          "env": "TF_VAR_region",
+        },
+        {
+          "env": "TF_VAR_account_id",
+        },
+        {
+          "env": "TF_WORKSPACE",
+        },
+        "{projectRoot}/tfplan",
+      ],
+      "options": {
+        "command": "terraform apply -auto-approve tfplan",
+        "cwd": "packages/terraform-setup",
+      },
+      "parallelism": true,
+    },
+    "terraform-destroy": {
+      "cache": false,
+      "configurations": {
+        "dev": {
+          "args": [
+            "-auto-approve",
+            "",
+          ],
+        },
+        "prod": {
+          "args": [
+            "-auto-approve",
+            "",
+          ],
+        },
+      },
+      "defaultConfiguration": "dev",
+      "dependsOn": [
+        "terraform-init",
+      ],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "terraform destroy",
+        "cwd": "packages/terraform-setup",
+      },
+      "parallelism": true,
+    },
+    "terraform-fmt": {
+      "cache": true,
+      "configurations": {},
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{projectRoot}/*.tf",
+        "{projectRoot}/**/*.tf",
+        "{projectRoot}/templates/*",
+        "{projectRoot}/tfvars/*",
+      ],
+      "options": {
+        "command": "terraform fmt -write=true",
+        "cwd": "packages/terraform-setup",
+      },
+      "parallelism": true,
+    },
+    "terraform-init": {
+      "cache": true,
+      "configurations": {
+        "dev": {
+          "args": [
+            "",
+          ],
+        },
+        "prod": {
+          "args": [
+            "",
+          ],
+        },
+      },
+      "defaultConfiguration": "dev",
+      "dependsOn": [
+        "^terraform-apply",
+      ],
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{projectRoot}/provider.tf",
+        "{projectRoot}/backend.tf",
+        {
+          "env": "TF_VAR_region",
+        },
+        {
+          "env": "TF_VAR_account_id",
+        },
+        {
+          "env": "TF_WORKSPACE",
+        },
+      ],
+      "options": {
+        "command": "terraform init",
+        "cwd": "packages/terraform-setup",
+      },
+      "outputs": [
+        "{projectRoot}/.terraform",
+        "{projectRoot}/.terraform.lock.hcl",
+      ],
+      "parallelism": true,
+    },
+    "terraform-output": {
+      "configurations": {},
+      "dependsOn": [
+        "terraform-init",
+      ],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "terraform output -json | jq -r "to_entries[] | \\"\\(.key)=\\(.value.value)\\"" > terraform-outputs.env",
+        "cwd": "packages/terraform-setup",
+      },
+      "outputs": [
+        "{projectRoot}/terraform-outputs.env",
+      ],
+      "parallelism": true,
+    },
+    "terraform-plan": {
+      "cache": true,
+      "configurations": {
+        "dev": {
+          "args": [
+            "-out=tfplan",
+            "",
+          ],
+        },
+        "prod": {
+          "args": [
+            "-out=tfplan",
+            "",
+          ],
+        },
+      },
+      "defaultConfiguration": "dev",
+      "dependsOn": [
+        "terraform-init",
+      ],
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{projectRoot}/*.tf",
+        "{projectRoot}/**/*.tf",
+        "{projectRoot}/templates/*",
+        "{projectRoot}/tfvars/*",
+        {
+          "env": "TF_VAR_region",
+        },
+        {
+          "env": "TF_VAR_account_id",
+        },
+        {
+          "env": "TF_WORKSPACE",
+        },
+      ],
+      "options": {
+        "command": "terraform plan",
+        "cwd": "packages/terraform-setup",
+      },
+      "outputs": [
+        "{projectRoot}/tfplan",
+      ],
+      "parallelism": true,
+    },
+    "terraform-validate": {
+      "cache": true,
+      "configurations": {},
+      "dependsOn": [
+        "terraform-init",
+      ],
+      "executor": "nx:run-commands",
+      "inputs": [
+        "{projectRoot}/*.tf",
+        "{projectRoot}/**/*.tf",
+        "{projectRoot}/templates/*",
+        "{projectRoot}/tfvars/*",
+        {
+          "env": "TF_VAR_region",
+        },
+        {
+          "env": "TF_VAR_account_id",
+        },
+        {
+          "env": "TF_WORKSPACE",
+        },
+      ],
+      "options": {
+        "command": "terraform validate",
+        "cwd": "packages/terraform-setup",
+      },
+      "parallelism": true,
+    },
+  },
+}
+`;
