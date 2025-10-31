@@ -12,12 +12,12 @@ export default async () => {
   // local registry target to run
   const localRegistryTarget = '@nx-terraform/source:local-registry';
   // storage folder for the local registry
-  const storage = './tmp/local-registry/storage';
+  const storage = './tmp/nx-terraform-local-registry';
 
   global.stopLocalRegistry = await startLocalRegistry({
     localRegistryTarget,
     storage,
-    verbose: false,
+    clearStorage: true,
   });
 
   await releaseVersion({
@@ -25,13 +25,11 @@ export default async () => {
     stageChanges: false,
     gitCommit: false,
     gitTag: false,
-    firstRelease: true,
     versionActionsOptionsOverrides: {
       skipLockFileUpdate: true,
     },
   });
   await releasePublish({
     tag: 'e2e',
-    firstRelease: true,
   });
 };

@@ -43,6 +43,9 @@ jobs:
       - name: Quality gates
         run: npx nx run-many -t lint test build
 
+      - name: E2E Tests
+        run: npx nx run-many -t e2e
+
       - name: Publish packages
         if: startsWith(github.ref, 'refs/tags/')
         run: npx nx release publish

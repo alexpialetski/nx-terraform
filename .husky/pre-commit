@@ -1,0 +1,1 @@
+npx nx run-many -t lint test build
