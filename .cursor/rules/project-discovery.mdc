@@ -1,0 +1,60 @@
+---
+description: How Terraform projects are discovered via CreateNodesV2 API, project types, and discovery logic
+globs:
+  - "**/inferedTasks.ts"
+  - "**/main.tf"
+  - "**/project.json"
+alwaysApply: false
+---
+
+# Project Discovery (Inferred Tasks)
+
+## Discovery Mechanism
+
+The plugin uses Nx's `CreateNodesV2` API to automatically discover Terraform projects.
+
+## Discovery Logic
+
+- **Config file pattern**: `**/main.tf` (defined in `packages/nx-terraform/src/inferedTasks.ts`)
+- **Discovery requirements**: 
+  - Must have `main.tf` file
+  - Must have `project.json` in the same directory
+- **Type detection**: Based on `projectType` and `metadata.backendProject` in `project.json`
+
+## Project Types
+
+### Backend Projects
+- `projectType: 'application'`
+- No `metadata.backendProject`
+- Manages remote state infrastructure (e.g., S3 bucket)
+- Generates `backend.config` files
+
+### Stateful Projects
+- `projectType: 'application'`
+- Has `metadata.backendProject` pointing to backend project
+- Uses remote state via referenced backend
+- Full Terraform lifecycle support
+
+### Module Projects
+- `projectType: 'library'`
+- Reusable Terraform modules
+- No state management
+- Stub targets only
+
+## Modifying Discovery Logic
+
+When modifying discovery logic:
+
+1. Update `createNodesInternal` in `packages/nx-terraform/src/inferedTasks.ts`
+2. Modify target selection logic based on project metadata
+3. Test with different project configurations
+4. Ensure all three project types are handled correctly
+
+## Project Configuration Requirements
+
+Projects must have:
+- `project.json` with `projectType: 'application'` or `'library'`
+- `main.tf` file (required for discovery)
+- Optional `tfvars/dev.tfvars` and `tfvars/prod.tfvars` for configurations
+- Backend projects have `backend.config` file (generated after apply)
+- Stateful projects reference backend via `metadata.backendProject` in `project.json`

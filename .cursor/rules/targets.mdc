@@ -1,0 +1,73 @@
+---
+description: Terraform target definitions, configurations by project type, dependencies, and caching strategies
+globs:
+  - "**/targets/**"
+  - "**/project.json"
+alwaysApply: false
+---
+
+# Targets (Terraform Commands)
+
+## Target List
+
+The plugin automatically creates these targets for discovered Terraform projects:
+
+- **terraform-init**: Initialize Terraform workspace
+- **terraform-plan**: Create execution plan
+- **terraform-apply**: Apply changes
+- **terraform-destroy**: Destroy infrastructure
+- **terraform-validate**: Validate configuration
+- **terraform-fmt**: Format code
+- **terraform-output**: Export outputs
+
+## Target Configuration by Project Type
+
+### Backend Projects (`application` without `backendProject` metadata)
+- Full target set with caching enabled
+
+### Stateful Projects (`application` with `backendProject` metadata)
+- Full target set (no caching for init/plan due to state)
+
+### Module Projects (`library`)
+- Stub targets that echo messages (modules don't have state)
+
+## Target Dependencies
+
+- `terraform-init` depends on `^terraform-apply` (backend must be applied first)
+- `terraform-plan` depends on `terraform-init`
+- `terraform-apply` depends on `terraform-plan`
+- `terraform-destroy` depends on `terraform-init`
+- `terraform-validate` depends on `terraform-init`
+- `terraform-output` depends on `terraform-init`
+
+## Target Development Rules
+
+When adding or modifying targets:
+
+1. Define target in `packages/nx-terraform/src/targets/default.ts`
+2. Add to appropriate factory function:
+   - `getBackendProjectTargets()` - for backend projects
+   - `getStatefulProjectTargets()` - for stateful projects
+   - `getModuleProjectTargets()` - for module projects
+3. Add type to `TerraformTarget` union in `packages/nx-terraform/src/targets/type.ts`
+4. Update inputs/outputs if needed in `packages/nx-terraform/src/targets/inputs.ts`
+5. Use `nx:run-commands` executor for Terraform commands
+6. Set `cwd: '{projectRoot}'` for all targets
+7. Support `dev` and `prod` configurations with `-var-file` arguments
+
+## Caching Strategy
+
+### Cached Targets
+- `terraform-fmt`: Code formatting is deterministic
+- `terraform-validate`: Validation results can be cached when inputs haven't changed
+
+### Non-Cached Targets
+- `terraform-init`: State-dependent, requires backend access
+- `terraform-plan`: State-dependent, shows infrastructure changes
+- `terraform-apply`: State-dependent, modifies infrastructure
+
+### Cache Inputs
+Defined in `packages/nx-terraform/src/targets/inputs.ts`:
+- `TERRAFORM_FILES_INPUTS`: All `.tf`, `.tfvars` files
+- `TERRAFORM_ENV_VARIABLES_INPUTS`: Environment variables
+- `TERRAFORM_ALL_INPUTS`: Combination of files and env vars

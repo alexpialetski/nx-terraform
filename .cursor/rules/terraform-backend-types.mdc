@@ -1,0 +1,76 @@
+---
+description: Terraform backend types (AWS S3 and local), their characteristics, usage scenarios, and configuration
+globs:
+  - "**/terraform-backend/**"
+  - "**/backend.config"
+  - "**/backend.tf"
+alwaysApply: false
+---
+
+# Terraform Backend Types
+
+## Supported Backend Types
+
+The plugin supports two backend types: `aws-s3` and `local`
+
+## AWS S3 Backend
+
+### Characteristics
+- Production-ready remote state storage
+- Versioning enabled
+- Object lock for state protection
+- Dynamic bucket naming: `{bucketNamePrefix}-{account-id}-{region}`
+- Default bucket prefix: `terraform-state`
+
+### When to Use
+- Production infrastructure
+- Team collaboration
+- CI/CD pipelines
+- State locking required
+
+### Template Location
+`packages/nx-terraform/src/generators/terraform-backend/files/aws-s3-backend/`
+
+## Local Backend
+
+### Characteristics
+- Local state file storage
+- Simple structure
+- Suitable for development/testing
+
+### When to Use
+- Development and testing
+- Single-user scenarios
+- Ephemeral environments
+- Quick prototyping
+
+### Template Location
+`packages/nx-terraform/src/generators/terraform-backend/files/local-backend/`
+
+## Backend Configuration
+
+### Backend Projects
+- Create infrastructure for state storage (S3 bucket or local files)
+- Generate `backend.config` file after apply
+- Located at `packages/{backend-name}/backend.config`
+
+### Stateful Projects
+- Reference backend via `metadata.backendProject` in `project.json`
+- Use `backend.config` from referenced backend during `terraform-init`
+- Command: `terraform init -backend-config=../{backendProject}/backend.config -reconfigure`
+
+## Backend Generator Options
+
+### terraform-backend Generator
+- `name`: Backend project name (required)
+- `backendType`: 'aws-s3' or 'local' (required)
+- `bucketNamePrefix`: Prefix for S3 bucket name (optional, default: 'terraform-state', AWS S3 only)
+
+### Default Values
+- `bucketNamePrefix`: `'terraform-state'` (normalized in `terraform-backend.ts`)
+- `ignoreFile`: `'.gitignore'` (for template substitution)
+
+## Backend Project Naming
+
+- Preset generator hardcodes backend project name as `'terraform-setup'`
+- User-created backends can have any valid project name
