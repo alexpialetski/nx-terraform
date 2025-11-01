@@ -15,6 +15,11 @@
       "factory": "./src/generators/init/init",
       "schema": "./src/generators/init/schema.json",
       "description": "init generator"
+    },
+    "terraform-module": {
+      "factory": "./src/generators/terraform-module/terraform-module",
+      "schema": "./src/generators/terraform-module/schema.json",
+      "description": "terraform-module generator"
     }
   }
 }

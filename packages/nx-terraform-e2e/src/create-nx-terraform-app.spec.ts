@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { join, dirname } from 'path';
-import { mkdirSync, rmSync, readFileSync, existsSync } from 'fs';
+import { mkdirSync, rmSync, readFileSync, existsSync, writeFileSync } from 'fs';
 
 describe('create-nx-terraform-app', () => {
   let projectDirectory: string;
@@ -24,31 +24,61 @@ describe('create-nx-terraform-app', () => {
       stdio: 'inherit',
     });
 
+    // Verify terraform-setup backend project exists
     const backendProject = JSON.parse(
       execSync('nx show project terraform-setup --json', {
         cwd: projectDirectory,
       }).toString()
     );
-
+    const backendProjectPath = join(
+      projectDirectory,
+      'packages/terraform-setup'
+    );
     expect(backendProject).toMatchSnapshot();
 
-    execSync('nx run terraform-setup:terraform-apply', {
+    // Verify terraform-infra stateful module exists
+    const infraProject = JSON.parse(
+      execSync('nx show project terraform-infra --json', {
+        cwd: projectDirectory,
+      }).toString()
+    );
+    const infraProjectPath = join(projectDirectory, 'packages/terraform-infra');
+    expect(infraProject).toMatchSnapshot();
+
+    // Add local provider configuration to terraform-infra
+    writeFileSync(
+      join(infraProjectPath, 'provider.tf'),
+      readFileSync(join(__dirname, 'files/local_provider.tf'), 'utf-8')
+    );
+
+    // Add a local file resource to terraform-infra to test resource creation
+    writeFileSync(
+      join(infraProjectPath, 'test_resource.tf'),
+      readFileSync(join(__dirname, 'files/new_resource.tf'), 'utf-8')
+    );
+
+    // Run terraform-apply on terraform-infra
+    // This should automatically apply terraform-setup first due to dependencies
+    execSync('nx run terraform-infra:terraform-apply', {
       cwd: projectDirectory,
       stdio: 'inherit',
     });
+
+    // Verify backend was applied (terraform-setup state exists)
     expect(
-      existsSync(
-        projectDirectory + '/packages/terraform-setup/terraform.tfstate'
-      )
+      existsSync(join(backendProjectPath, 'terraform.tfstate'))
     ).toBeTruthy();
+
+    // Verify backend.config was created
     expect(
-      readFileSync(
-        projectDirectory + '/packages/terraform-setup/backend.config',
-        'utf-8'
-      )
-    ).toMatch(
-      `path = "${projectDirectory}/packages/terraform-setup/terraform.tfstate`
-    );
+      readFileSync(join(backendProjectPath, 'backend.config'), 'utf-8')
+    ).toMatch(`path = "${join(backendProjectPath, 'terraform.tfstate')}`);
+
+    // Verify the local file resource was created successfully
+    expect(existsSync(join(infraProjectPath, 'test-output.txt'))).toBeTruthy();
+    expect(
+      readFileSync(join(infraProjectPath, 'test-output.txt'), 'utf-8')
+    ).toBe('Hello from terraform-infra!');
   });
 });
 

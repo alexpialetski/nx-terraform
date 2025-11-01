@@ -1,0 +1,22 @@
+# Terraform Module: <%= name %>
+
+This is a reusable Terraform module.
+
+## Usage
+
+```hcl
+module "<%= name %>" {
+  source = "../../packages/<%= name %>"
+  
+  # Add your module input variables here
+}
+```
+
+## Variables
+
+See `variables.tf` for input variable definitions.
+
+## Outputs
+
+See `outputs.tf` for output value definitions.
+

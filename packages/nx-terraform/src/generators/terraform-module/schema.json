@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "TerraformModule",
+  "title": "",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the Terraform module",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use?"
+    },
+    "backendProject": {
+      "type": "string",
+      "description": "Optional name of the backend project to use. If provided, creates a stateful module (application) that uses the backend.config from the specified backend project. If not provided, creates a simple module (library).",
+      "x-prompt": "(Optional) Name of the backend project to use? Leave blank for a simple module"
+    },
+    "backendType": {
+      "type": "string",
+      "description": "Type of Terraform backend (aws-s3 or local). Required for API consistency, even for simple modules (where it's not used). Used for backend configuration when backendProject is provided.",
+      "enum": ["aws-s3", "local"],
+      "x-prompt": {
+        "message": "Which Terraform backend type?",
+        "type": "list",
+        "items": [
+          { "value": "aws-s3", "label": "AWS S3 remote backend" },
+          { "value": "local", "label": "Local backend (local state files)" }
+        ]
+      }
+    }
+  },
+  "required": ["name", "backendType"]
+}
+
