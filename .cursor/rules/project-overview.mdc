@@ -1,0 +1,20 @@
+---
+description: Overview of the nx-terraform plugin, its purpose, and documentation structure
+alwaysApply: true
+---
+
+# Project Overview
+
+This is an Nx plugin for managing Terraform projects within an Nx monorepo. The plugin provides:
+- **Generators**: Scaffold Terraform backend projects and initialize the plugin
+- **Inferred Tasks**: Automatically discovers Terraform projects and creates targets
+- **Targets**: Terraform commands (init, plan, apply, destroy, validate, fmt, output)
+
+## Documentation Structure
+
+- `README.md` (root) - Quick start guide and essential information for users
+- `packages/nx-terraform/README.md` - Main plugin documentation with comprehensive features, generators, targets, and examples
+- `packages/create-nx-terraform-app/README.md` - CLI tool documentation for workspace creation
+- Generator READMEs - Detailed documentation for each generator in `packages/nx-terraform/src/generators/*/README.md`
+
+When working on this project, always reference these documentation files for context before making changes.

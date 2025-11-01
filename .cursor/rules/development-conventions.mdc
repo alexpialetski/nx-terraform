@@ -1,0 +1,61 @@
+---
+description: TypeScript, Nx plugin development conventions, file operations, testing, and build processes
+globs:
+  - "**/*.ts"
+  - "**/*.spec.ts"
+  - "**/generators/**"
+  - "**/targets/**"
+alwaysApply: false
+---
+
+# Development Conventions
+
+## TypeScript
+
+- **Module system**: CommonJS (`"type": "commonjs"` in package.json)
+- **Compilation**: Uses `@nx/js:tsc` executor
+- **Path aliases**: `nx-terraform` → `packages/nx-terraform/src/index.ts`
+
+## Nx Plugin Development
+
+- Uses `@nx/devkit` for plugin APIs
+- Follows Nx plugin structure conventions
+- Generators export default function and named export
+- Uses `Tree` API for all file operations (don't use fs directly in generators)
+- Always use `formatFiles()` after generating files
+- Schema files use JSON Schema (Draft 07)
+
+## File Operations
+
+- **Always use `Tree` API**: Never use `fs` directly in generators
+- **Format files**: Always call `formatFiles(tree)` after file generation
+- **Template files**: Use `__tmpl__` suffix for files with EJS syntax to avoid lint errors
+- **Template substitution**: `__ignoreFile__` → `.gitignore` via `ignoreFile: '.gitignore'`
+
+## Testing
+
+- Unit tests use Jest
+- Tests located alongside source files (`*.spec.ts`)
+- E2E tests in `packages/nx-terraform-e2e`
+- Test generators with Nx's testing utilities
+- Use `createTreeWithEmptyWorkspace` for generator tests
+
+## Code Organization
+
+- Generator code: `packages/nx-terraform/src/generators/<generator-name>/`
+- Target code: `packages/nx-terraform/src/targets/`
+- Plugin entry point: `packages/nx-terraform/src/inferedTasks.ts`
+- Public API: `packages/nx-terraform/src/index.ts`
+
+## Build & Distribution
+
+- Build output: `dist/packages/nx-terraform`
+- Assets copied: generators.json, executors.json, markdown files, non-TS source files
+- Version management: Uses git tags, publishes to npm
+
+## Important Constraints
+
+- Plugin uses Nx v22.0.2
+- Plugin name: `nx-terraform`
+- Always test generators before committing
+- Follow Nx plugin naming conventions and structure

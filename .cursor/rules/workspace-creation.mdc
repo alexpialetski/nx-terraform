@@ -1,0 +1,61 @@
+---
+description: Workspace creation via create-nx-terraform-app CLI, preset generator, and manual setup process
+globs:
+  - "**/create-nx-terraform-app/**"
+  - "**/preset/**"
+alwaysApply: false
+---
+
+# Workspace Creation
+
+## create-nx-terraform-app
+
+A CLI tool for creating new Nx workspaces with Terraform support.
+
+### Usage
+- Run via: `npx create-nx-terraform-app <workspace-name>`
+- Documentation: `packages/create-nx-terraform-app/README.md`
+
+### Features
+- Interactive workspace setup with prompts
+- Automatically configures nx-terraform plugin
+- Creates initial backend project named `terraform-setup`
+- Supports AWS S3 and local backends
+- Handles package manager setup, git initialization, and Nx Cloud integration
+
+### Implementation
+- Main entry: `packages/create-nx-terraform-app/bin/index.ts`
+- Wraps the `preset` generator
+- Uses `create-nx-workspace` from Nx
+- Built with: yargs, enquirer, picocolors
+
+### Integration with Preset
+- Calls `createWorkspace` with preset: `nx-terraform@<version>`
+- Preset generator runs `init` + `terraform-backend` generators
+- Backend project name is hardcoded as `'terraform-setup'` in preset
+
+## Preset Generator
+
+### Usage
+- Direct: `nx g @nx-terraform/plugin:preset --projectName=terraform-setup --backendType=aws-s3`
+- Via CLI: Automatically called by `create-nx-terraform-app`
+
+### What It Does
+1. Runs `init` generator (registers plugin)
+2. Creates backend project via `terraform-backend` generator
+3. Sets up complete workspace structure
+
+### Options
+- `projectName`: Name of backend project (default: 'terraform-setup')
+- `backendType`: 'aws-s3' or 'local' (required)
+
+## Adding Terraform to Existing Workspace
+
+### Manual Process
+1. `nx add nx-terraform` - Installs plugin
+2. `nx g @nx-terraform/plugin:init` - Registers plugin
+3. `nx g @nx-terraform/plugin:terraform-backend <name> --backendType=<type>` - Creates backend
+
+### Notes
+- Use `create-nx-terraform-app` for new workspaces (recommended)
+- Manual setup for existing workspaces only

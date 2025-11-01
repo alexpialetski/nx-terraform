@@ -1,0 +1,85 @@
+---
+description: TypeScript and generator code style guidelines, schema patterns, template conventions, and error handling
+globs:
+  - "**/*.ts"
+  - "**/schema.json"
+  - "**/files/**"
+alwaysApply: false
+---
+
+# Code Style and Best Practices
+
+## TypeScript Style
+
+- Use CommonJS module system
+- Export both default and named exports for generators
+- Use async/await for asynchronous operations
+- Type all function parameters and return values
+
+## Generator Code Style
+
+```typescript
+// Generator function signature
+export async function generatorName(
+  tree: Tree,
+  options: GeneratorSchema
+) {
+  // Implementation
+}
+
+// Default export (required)
+export default generatorName;
+```
+
+## Schema Definition
+
+- Use JSON Schema Draft 07
+- Place in `schema.json` file
+- Define TypeScript types in `schema.d.ts`
+- Use `x-prompt` for interactive prompts
+- Mark required fields in `required` array
+
+## Normalization Pattern
+
+Always normalize options before use:
+
+```typescript
+const normalizeOptions = (
+  options: GeneratorSchema
+): GeneratorNormalizedSchema => ({
+  ...options,
+  optionalField: options.optionalField || defaultValue,
+  ignoreFile: '.gitignore',
+  tmpl: '', // For __tmpl__ suffix stripping
+});
+```
+
+## Template File Patterns
+
+- Template files with EJS: Use `__tmpl__` suffix (e.g., `main.tf__tmpl__`)
+- Template directory: `files/` subdirectory
+- Variable substitution: `<%= variableName %>`
+- Conditionals: `<% if (condition) { %> ... <% } %>`
+- Always include `tmpl: ''` in normalized options for `__tmpl__` stripping
+
+## Error Handling
+
+- Validate inputs early (in generator function)
+- Throw descriptive error messages
+- Validate backend project exists before referencing it
+- Check for required files (e.g., `project.json`, `main.tf`)
+
+## Testing Style
+
+- Test file: `*.spec.ts` alongside source file
+- Use `createTreeWithEmptyWorkspace()` for test setup
+- Test both success and error cases
+- Test normalization logic separately
+- Verify generated files and project configuration
+
+## File Naming
+
+- Generator files: `generator-name.ts`
+- Schema: `schema.json` and `schema.d.ts`
+- Tests: `generator-name.spec.ts`
+- Templates: `files/` directory with descriptive names
