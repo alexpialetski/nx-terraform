@@ -28,10 +28,10 @@
     },
     "bucketNamePrefix": {
       "type": "string",
-      "description": "Optional prefix for derived bucket name (aws-s3). Default: tf-rs-school-",
+      "description": "Optional prefix for derived bucket name (aws-s3). Default: terraform-state",
       "minLength": 3,
       "pattern": "^[a-z0-9][a-z0-9.-]{1,30}$",
-      "x-prompt": "(Optional) Prefix for bucket name? Leave blank for tf-rs-school-"
+      "x-prompt": "(Optional) Prefix for bucket name? Leave blank for terraform-state"
     }
   },
   "required": ["name", "backendType"]
