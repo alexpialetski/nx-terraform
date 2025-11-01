@@ -15,8 +15,15 @@ describe('preset generator', () => {
 
     await presetGenerator(tree, options);
 
-    const config = readProjectConfiguration(tree, 'terraform-setup');
-    expect(config).toBeDefined();
+    // Verify terraform-setup backend project is created
+    const backendConfig = readProjectConfiguration(tree, 'terraform-setup');
+    expect(backendConfig).toBeDefined();
+
+    // Verify terraform-infra stateful module is created
+    const infraConfig = readProjectConfiguration(tree, 'terraform-infra');
+    expect(infraConfig).toBeDefined();
+    expect(infraConfig.projectType).toBe('application');
+    expect(infraConfig.metadata?.backendProject).toBe('terraform-setup');
 
     expect(readNxJson(tree).plugins).toEqual(
       expect.arrayContaining([

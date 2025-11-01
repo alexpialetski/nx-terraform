@@ -1,0 +1,8 @@
+terraform {
+<% if (backendType === 'aws-s3') { %>
+  backend "s3" {}
+<% } else { %>
+  backend "local" {}
+<% } %>
+}
+

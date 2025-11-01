@@ -1,0 +1,20 @@
+# Terraform Module: <%= name %>
+
+This is a stateful Terraform module that uses the<% if (backendType === 'aws-s3') { %> AWS S3<% } else { %> local<% } %> backend configuration from the `<%= backendProject %>` project.
+
+## Backend Configuration
+
+This module uses the `backend.config` file from the `<%= backendProject %>` project. The backend configuration is automatically referenced during `terraform init`.
+
+## Usage
+
+This module manages its own Terraform state using the<% if (backendType === 'aws-s3') { %> AWS S3 remote<% } else { %> local<% } %> backend.
+
+## Variables
+
+See `variables.tf` for input variable definitions.
+
+## Outputs
+
+See `outputs.tf` for output value definitions.
+
