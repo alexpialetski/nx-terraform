@@ -24,6 +24,14 @@ describe('create-nx-terraform-app', () => {
       stdio: 'inherit',
     });
 
+    expect(
+      JSON.parse(
+        execSync('nx show projects --json', {
+          cwd: projectDirectory,
+        }).toString()
+      )
+    ).toEqual(['terraform-infra', 'terraform-setup']);
+
     // Verify terraform-setup backend project exists
     const backendProject = JSON.parse(
       execSync('nx show project terraform-setup --json', {
@@ -79,7 +87,7 @@ describe('create-nx-terraform-app', () => {
     expect(
       readFileSync(join(infraProjectPath, 'test-output.txt'), 'utf-8')
     ).toBe('Hello from terraform-infra!');
-  });
+  }, 1000000);
 });
 
 /**
