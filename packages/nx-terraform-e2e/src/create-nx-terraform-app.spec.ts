@@ -9,6 +9,7 @@ import {
   resetNx,
   verifyStaticDependency,
 } from './testUtils';
+import { ProjectConfiguration } from '@nx/devkit';
 
 describe('create-nx-terraform-app', () => {
   let projectDirectory: string;
@@ -76,7 +77,7 @@ describe('create-nx-terraform-app', () => {
     const sharedModuleProject = execNxCommand(
       'show project shared-module',
       projectDirectory
-    );
+    ) as ProjectConfiguration;
     expect(sharedModuleProject.projectType).toBe('library');
 
     // Add outputs to shared-module
@@ -104,18 +105,10 @@ describe('create-nx-terraform-app', () => {
 
     const projectGraph = getProjectGraph(projectDirectory);
     // Check for static dependency from terraform-infra to shared-module
-    verifyStaticDependency(
-      projectGraph,
-      'terraform-infra',
-      'shared-module'
-    );
+    verifyStaticDependency(projectGraph, 'terraform-infra', 'shared-module');
 
     // Check for static dependency from terraform-infra to terraform-setup (backend dependency)
-    verifyStaticDependency(
-      projectGraph,
-      'terraform-infra',
-      'terraform-setup'
-    );
+    verifyStaticDependency(projectGraph, 'terraform-infra', 'terraform-setup');
 
     // Run terraform-apply on terraform-infra
     execSync('nx run terraform-infra:terraform-apply', {
