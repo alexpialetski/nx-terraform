@@ -45,7 +45,7 @@ export async function terraformModuleGenerator(
           `Backend project "${normalizedOptions.backendProject}" not found.`
         );
       }
-    } catch (error) {
+    } catch {
       throw new Error(
         `Backend project "${normalizedOptions.backendProject}" not found. Please create it first using the terraform-backend generator.`
       );
@@ -54,7 +54,8 @@ export async function terraformModuleGenerator(
     projectConfig.metadata = {
       backendProject: normalizedOptions.backendProject,
     };
-    projectConfig.implicitDependencies = [normalizedOptions.backendProject];
+    // Note: Implicit dependencies to backend projects are now handled
+    // automatically by the createDependencies API in the dependencies module
   }
 
   addProjectConfiguration(tree, normalizedOptions.name, projectConfig);
@@ -82,4 +83,3 @@ const normalizeOptions = (
 });
 
 export default terraformModuleGenerator;
-

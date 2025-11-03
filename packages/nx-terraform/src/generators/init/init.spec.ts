@@ -8,7 +8,7 @@ describe('init generator', () => {
   const options: InitGeneratorSchema = {};
 
   it('should run successfully', async () => {
-    const tree = createTreeWithEmptyWorkspace();
+    const tree = createTreeWithEmptyWorkspace(options);
 
     await initGenerator(tree);
 

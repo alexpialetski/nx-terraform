@@ -124,7 +124,8 @@ describe('terraform-module generator', () => {
         expect(config.name).toEqual(statefulModuleOptions.name);
         expect(config.projectType).toEqual('application');
         expect(config.metadata?.backendProject).toEqual(backendName);
-        expect(config.implicitDependencies).toEqual([backendName]);
+        // Note: implicitDependencies are now created by createDependencies API
+        expect(config.implicitDependencies).toBeUndefined();
       });
 
       it('should throw error if backend project does not exist', async () => {
@@ -292,7 +293,8 @@ describe('terraform-module generator', () => {
         expect(config.name).toEqual(statefulModuleOptions.name);
         expect(config.projectType).toEqual('application');
         expect(config.metadata?.backendProject).toEqual(backendName);
-        expect(config.implicitDependencies).toEqual([backendName]);
+        // Note: implicitDependencies are now created by createDependencies API
+        expect(config.implicitDependencies).toBeUndefined();
       });
 
       it('should generate backend.tf file with local backend', async () => {
