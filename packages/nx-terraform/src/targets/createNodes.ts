@@ -10,11 +10,9 @@ import {
   getBackendProjectTargets,
   getModuleProjectTargets,
   getStatefulProjectTargets,
-} from './targets';
-import { TargetsConfigurationParams } from './targets';
-
-// Expected format of the plugin options defined in nx.json
-export type NxTerraformPluginOptions = unknown;
+  type TargetsConfigurationParams,
+} from './inferedTasks';
+import { NxTerraformPluginOptions } from '../types';
 
 // File glob to find all the configuration files for this plugin
 const terraformConfigGlob = '**/main.tf';
