@@ -1,1 +1,2 @@
-export * from './inferedTasks';
+export * from './targets';
+export * from './dependencies';
