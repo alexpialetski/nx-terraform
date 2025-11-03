@@ -1,3 +1,13 @@
+## 0.5.0 (2025-11-03)
+
+### 🚀 Features
+
+- **dependencies:** implement automatic dependency detection ([f5d7438](https://github.com/alexpialetski/nx-terraform/commit/f5d7438))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+
 ## 0.4.0 (2025-11-01)
 
 ### 🚀 Features
