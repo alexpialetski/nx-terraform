@@ -79,7 +79,9 @@ const normalizeOptions = (
 
 ## File Naming
 
-- Generator files: `generator-name.ts`
-- Schema: `schema.json` and `schema.d.ts`
-- Tests: `generator-name.spec.ts`
-- Templates: `files/` directory with descriptive names
+- **TypeScript source files**: Use camelCase (e.g., `createDependencies.ts`, `fileParser.ts`, `pathResolution.ts`)
+- **Generator files**: Use kebab-case to match Nx conventions (e.g., `terraform-backend.ts`, `terraform-module.ts`)
+- **Schema files**: `schema.json` and `schema.d.ts`
+- **Test files**: Use camelCase matching the source file name (e.g., `createDependencies.spec.ts`, `fileParser.spec.ts`)
+- **Templates**: `files/` directory with descriptive names
+- **Shared types**: Place in `types.ts` at the root of the `src/` folder

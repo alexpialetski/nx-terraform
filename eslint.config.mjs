@@ -45,12 +45,14 @@ export default [
       '**/*.mjs',
     ],
     // Override or add rules here
-    rules: {},
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'error'
+    },
   },
   {
     files: ['**/package.json', '**/generators.json'],
     rules: {
-      '@nx/nx-plugin-checks': 'error',
+      '@nx/nx-plugin-checks': 'error'
     },
     languageOptions: {
       parser: await import('jsonc-eslint-parser'),
