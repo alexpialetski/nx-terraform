@@ -111,11 +111,40 @@ The plugin supports three types of Terraform projects:
 
 ### Smart Dependencies
 
-The plugin automatically manages dependencies between Terraform projects:
+The plugin automatically manages dependencies between Terraform projects using the `createDependencies` API. This creates a project dependency graph that ensures proper execution order.
 
-- **Backend first**: Stateful projects depend on backend projects being applied
-- **Init before operations**: Plan, apply, and validate require init
-- **Plan before apply**: Apply depends on plan
+#### Automatic Dependency Detection
+
+The plugin automatically detects and creates dependencies in two ways:
+
+1. **Backend Project Dependencies**: Projects with `metadata.backendProject` in their `project.json` automatically depend on their backend project. This ensures backend projects are applied before stateful projects initialize.
+
+2. **Module Reference Dependencies**: The plugin analyzes `.tf` files to detect module references using local paths (e.g., `source = "../../packages/networking"`). When a module block references another Terraform project, a dependency is automatically created.
+
+**How Module Detection Works:**
+- Scans `.tf` files for `module` blocks
+- Extracts `source` attributes that use local paths (`./` or `../`)
+- Matches the last path segment to project names in the workspace
+- Creates static dependencies from the referencing project to the referenced project
+
+**Example:**
+```hcl
+# In packages/web-app/main.tf
+module "networking" {
+  source = "../../packages/networking"
+  # ... module configuration
+}
+```
+
+This automatically creates a dependency: `web-app` → `networking`
+
+#### Target Dependencies
+
+In addition to project dependencies, targets have their own dependencies:
+
+- **Backend first**: `terraform-init` depends on `^terraform-apply` (backend must be applied first)
+- **Init before operations**: `terraform-plan`, `terraform-apply`, and `terraform-validate` require `terraform-init`
+- **Plan before apply**: `terraform-apply` depends on `terraform-plan`
 
 ### Caching
 
@@ -392,18 +421,28 @@ nx run prod-infra:terraform-plan --configuration=prod
 nx run prod-infra:terraform-apply --configuration=prod
 ```
 
-### Reusable Modules
+### Reusable Modules with Automatic Dependencies
 
 ```bash
 # Create reusable networking module
 nx g @nx-terraform/plugin:terraform-module networking --backendType=local
 
-# Use in other projects via module reference:
-# module "networking" {
-#   source = "../../packages/networking"
-#   ...
-# }
+# Create web app that uses the networking module
+nx g @nx-terraform/plugin:terraform-module web-app \
+  --backendProject=terraform-setup \
+  --backendType=aws-s3
 ```
+
+Then reference the module in your Terraform code:
+```hcl
+# In packages/web-app/main.tf
+module "networking" {
+  source = "../../packages/networking"
+  vpc_cidr = "10.0.0.0/16"
+}
+```
+
+**Automatic Dependency Detection**: The plugin automatically detects this module reference and creates a project dependency (`web-app` → `networking`). When you run `nx graph`, you'll see the dependency visualized. This ensures `networking` is built/validated before `web-app`.
 
 ## Project Discovery
 
