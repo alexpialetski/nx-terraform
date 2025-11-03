@@ -11,6 +11,7 @@ npx create-nx-terraform-app my-workspace
 ```
 
 This will:
+
 - Create a new Nx workspace
 - Install and configure the `nx-terraform` plugin
 - Set up an initial Terraform backend project (`terraform-setup`)
@@ -26,22 +27,24 @@ If you want to add Terraform support to an existing Nx workspace:
 nx add nx-terraform
 
 # Initialize the plugin
-nx g @nx-terraform/plugin:init
+nx g nx-terraform:init
 
 # Create a Terraform backend
-nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
 ```
 
 ## What's Next?
 
 - **Apply your backend** (if using remote backend):
+
   ```bash
   nx run my-backend:terraform-apply
   ```
 
 - **Create infrastructure modules**:
+
   ```bash
-  nx g @nx-terraform/plugin:terraform-module my-infra \
+  nx g nx-terraform:terraform-module my-infra \
     --backendProject=my-backend \
     --backendType=aws-s3
   ```
