@@ -245,9 +245,7 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
 exports[`create-nx-terraform-app end to end flow 2`] = `
 {
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "implicitDependencies": [
-    "terraform-setup",
-  ],
+  "implicitDependencies": [],
   "metadata": {
     "backendProject": "terraform-setup",
   },

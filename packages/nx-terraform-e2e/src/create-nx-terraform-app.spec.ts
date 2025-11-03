@@ -1,6 +1,14 @@
 import { execSync } from 'child_process';
-import { join, dirname } from 'path';
-import { mkdirSync, rmSync, readFileSync, existsSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
+import {
+  cleanupTestProject,
+  createTestProject,
+  execNxCommand,
+  getProjectGraph,
+  resetNx,
+  verifyStaticDependency,
+} from './testUtils';
 
 describe('create-nx-terraform-app', () => {
   let projectDirectory: string;
@@ -8,15 +16,12 @@ describe('create-nx-terraform-app', () => {
   afterAll(() => {
     if (projectDirectory) {
       // Cleanup the test project
-      rmSync(projectDirectory, {
-        recursive: true,
-        force: true,
-      });
+      cleanupTestProject(projectDirectory);
     }
   });
 
   test('end to end flow', () => {
-    projectDirectory = createTestProject('--backendType=local');
+    projectDirectory = createTestProject('test-project', '--backendType=local');
 
     // npm ls will fail if the package is not installed properly
     execSync('npm ls nx-terraform', {
@@ -24,19 +29,16 @@ describe('create-nx-terraform-app', () => {
       stdio: 'inherit',
     });
 
-    expect(
-      JSON.parse(
-        execSync('nx show projects --json', {
-          cwd: projectDirectory,
-        }).toString()
-      )
-    ).toEqual(['terraform-infra', 'terraform-setup']);
+    // Verify initial projects exist
+    expect(execNxCommand('show projects', projectDirectory)).toEqual([
+      'terraform-infra',
+      'terraform-setup',
+    ]);
 
     // Verify terraform-setup backend project exists
-    const backendProject = JSON.parse(
-      execSync('nx show project terraform-setup --json', {
-        cwd: projectDirectory,
-      }).toString()
+    const backendProject = execNxCommand(
+      'show project terraform-setup',
+      projectDirectory
     );
     const backendProjectPath = join(
       projectDirectory,
@@ -45,28 +47,77 @@ describe('create-nx-terraform-app', () => {
     expect(backendProject).toMatchSnapshot();
 
     // Verify terraform-infra stateful module exists
-    const infraProject = JSON.parse(
-      execSync('nx show project terraform-infra --json', {
-        cwd: projectDirectory,
-      }).toString()
+    const infraProject = execNxCommand(
+      'show project terraform-infra',
+      projectDirectory
     );
     const infraProjectPath = join(projectDirectory, 'packages/terraform-infra');
     expect(infraProject).toMatchSnapshot();
 
-    // Add local provider configuration to terraform-infra
-    writeFileSync(
-      join(infraProjectPath, 'provider.tf'),
-      readFileSync(join(__dirname, 'files/local_provider.tf'), 'utf-8')
+    // Generate stateless terraform module (library)
+    execSync(
+      'nx g nx-terraform:terraform-module shared-module --backendType=local --backendProject=""',
+      {
+        cwd: projectDirectory,
+        stdio: 'inherit',
+      }
     );
 
-    // Add a local file resource to terraform-infra to test resource creation
+    resetNx(projectDirectory);
+
+    // Verify shared-module project was created
+    const projectsAfterModule = execNxCommand(
+      'show projects',
+      projectDirectory
+    );
+    expect(projectsAfterModule).toContain('shared-module');
+
+    // Verify shared-module is a library (stateless module)
+    const sharedModuleProject = execNxCommand(
+      'show project shared-module',
+      projectDirectory
+    );
+    expect(sharedModuleProject.projectType).toBe('library');
+
+    // Add outputs to shared-module
+    const sharedModulePath = join(projectDirectory, 'packages/shared-module');
     writeFileSync(
-      join(infraProjectPath, 'test_resource.tf'),
+      join(sharedModulePath, 'outputs.tf'),
+      readFileSync(join(__dirname, 'files/shared_module_outputs.tf'), 'utf-8')
+    );
+
+    // Add module reference to terraform-infra
+    writeFileSync(
+      join(infraProjectPath, 'module_reference.tf'),
+      readFileSync(join(__dirname, 'files/module_reference.tf'), 'utf-8')
+    );
+
+    // Add a resource that uses the module output
+    writeFileSync(
+      join(infraProjectPath, 'new_resource.tf'),
       readFileSync(join(__dirname, 'files/new_resource.tf'), 'utf-8')
     );
 
+    // Verify dependency is detected in the project graph
+    // First, trigger dependency calculation by resetting the cache
+    resetNx(projectDirectory);
+
+    const projectGraph = getProjectGraph(projectDirectory);
+    // Check for static dependency from terraform-infra to shared-module
+    verifyStaticDependency(
+      projectGraph,
+      'terraform-infra',
+      'shared-module'
+    );
+
+    // Check for static dependency from terraform-infra to terraform-setup (backend dependency)
+    verifyStaticDependency(
+      projectGraph,
+      'terraform-infra',
+      'terraform-setup'
+    );
+
     // Run terraform-apply on terraform-infra
-    // This should automatically apply terraform-setup first due to dependencies
     execSync('nx run terraform-infra:terraform-apply', {
       cwd: projectDirectory,
       stdio: 'inherit',
@@ -82,37 +133,10 @@ describe('create-nx-terraform-app', () => {
       readFileSync(join(backendProjectPath, 'backend.config'), 'utf-8')
     ).toMatch(`path = "${join(backendProjectPath, 'terraform.tfstate')}`);
 
-    // Verify the local file resource was created successfully
+    // Verify the local file resource was created successfully using module output
     expect(existsSync(join(infraProjectPath, 'test-output.txt'))).toBeTruthy();
     expect(
       readFileSync(join(infraProjectPath, 'test-output.txt'), 'utf-8')
-    ).toBe('Hello from terraform-infra!');
-  }, 1000000);
+    ).toBe('Hello from shared-module!');
+  }, 120000);
 });
-
-/**
- * Creates a test project with create-nx-workspace and installs the plugin
- * @returns The directory where the test project was created
- */
-function createTestProject(extraArgs = '') {
-  const projectName = 'test-project';
-  const projectDirectory = join(process.cwd(), 'tmp', projectName);
-
-  // Ensure projectDirectory is empty
-  rmSync(projectDirectory, {
-    recursive: true,
-    force: true,
-  });
-  mkdirSync(dirname(projectDirectory), {
-    recursive: true,
-  });
-
-  execSync(`npx create-nx-terraform-app@e2e ${projectName} ${extraArgs}`, {
-    cwd: dirname(projectDirectory),
-    stdio: 'inherit',
-    env: process.env,
-  });
-  console.log(`Created test project in "${projectDirectory}"`);
-
-  return projectDirectory;
-}
