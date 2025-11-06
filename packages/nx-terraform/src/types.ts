@@ -3,3 +3,4 @@
  */
 export type NxTerraformPluginOptions = unknown;
 
+export type TerraformBackendType = 'aws-s3' | 'local';

@@ -55,6 +55,7 @@ export const getTerraformInitTarget = (
       ...TERRAFORM_ENV_VARIABLES_INPUTS,
     ],
     outputs: ['{projectRoot}/.terraform', '{projectRoot}/.terraform.lock.hcl'],
+    syncGenerators: ['nx-terraform:sync-terraform-metadata'],
     ...getConfigurations({ dev: false, prod: false }, args),
   };
 };
