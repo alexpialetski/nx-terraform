@@ -20,6 +20,11 @@
       "factory": "./src/generators/terraform-module/terraform-module",
       "schema": "./src/generators/terraform-module/schema.json",
       "description": "terraform-module generator"
+    },
+    "sync-terraform-metadata": {
+      "factory": "./src/generators/sync-terraform-metadata/sync-terraform-metadata",
+      "schema": "./src/generators/sync-terraform-metadata/schema.json",
+      "description": "sync-terraform-metadata generator"
     }
   }
 }
