@@ -1,4 +1,6 @@
+import type { TerraformBackendType } from '../../types';
+
 export interface PresetGeneratorSchema {
   projectName: string;
-  backendType: 'aws-s3' | 'local';
+  backendType?: TerraformBackendType;
 }

@@ -20,6 +20,8 @@ describe('terraform-backend generator', () => {
 
       expect(config.name).toEqual(awsOptions.name);
       expect(config.projectType).toEqual('application');
+      expect(config.metadata?.['nx-terraform']?.projectType).toEqual('backend');
+      expect(config.metadata?.['nx-terraform']?.backendType).toEqual('aws-s3');
       expect(
         tree.exists(`packages/${awsOptions.name}/.gitignore`)
       ).toBeTruthy();
@@ -74,6 +76,8 @@ describe('terraform-backend generator', () => {
 
       expect(config.name).toEqual(localOptions.name);
       expect(config.projectType).toEqual('application');
+      expect(config.metadata?.['nx-terraform']?.projectType).toEqual('backend');
+      expect(config.metadata?.['nx-terraform']?.backendType).toEqual('local');
       expect(
         tree.exists(`packages/${localOptions.name}/.gitignore`)
       ).toBeTruthy();

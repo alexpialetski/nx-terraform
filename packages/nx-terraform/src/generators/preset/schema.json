@@ -17,17 +17,9 @@
     },
     "backendType": {
       "type": "string",
-      "description": "Terraform backend type to scaffold (aws-s3 or local).",
-      "enum": ["aws-s3", "local"],
-      "x-prompt": {
-        "message": "Select Terraform backend type",
-        "type": "list",
-        "items": [
-          { "value": "aws-s3", "label": "AWS S3 remote backend" },
-          { "value": "local", "label": "Local backend" }
-        ]
-      }
+      "description": "Terraform backend type to scaffold (aws-s3 or local). If not provided, no backend project will be created.",
+      "enum": ["aws-s3", "local"]
     }
   },
-  "required": ["projectName", "backendType"]
+  "required": ["projectName"]
 }

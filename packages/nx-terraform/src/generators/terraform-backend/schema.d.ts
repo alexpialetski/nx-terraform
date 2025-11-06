@@ -1,6 +1,8 @@
+import type { TerraformBackendType } from '../../types';
+
 export interface TerraformBackendGeneratorSchema {
   name: string;
-  backendType: 'aws-s3' | 'local';
+  backendType: TerraformBackendType;
   bucketNamePrefix?: string;
 }
 

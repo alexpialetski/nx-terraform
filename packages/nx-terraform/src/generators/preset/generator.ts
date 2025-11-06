@@ -14,17 +14,22 @@ export async function presetGenerator(
   // Add nx-terraform plugin to the workspace
   await initGenerator(tree);
 
-  // Scaffold terraform backend project
-  await terraformBackendGenerator(tree, {
-    name: 'terraform-setup',
-    backendType: options.backendType,
-  });
+  // Scaffold terraform backend project only if backendType is provided
+  if (options.backendType) {
+    await terraformBackendGenerator(tree, {
+      name: 'terraform-setup',
+      backendType: options.backendType,
+    });
+  }
 
-  // Scaffold stateful terraform module connected to the backend
+  // Scaffold terraform module
+  // If backend exists, connect it; otherwise create a standalone module
   await terraformModuleGenerator(tree, {
     name: 'terraform-infra',
-    backendProject: 'terraform-setup',
-    backendType: options.backendType,
+    ...(options.backendType && {
+      backendProject: 'terraform-setup',
+      backendType: options.backendType,
+    }),
   });
 
   await formatFiles(tree);

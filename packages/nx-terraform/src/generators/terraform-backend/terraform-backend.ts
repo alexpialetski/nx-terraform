@@ -9,6 +9,7 @@ import {
   TerraformBackendGeneratorNormalizedSchema,
   TerraformBackendGeneratorSchema,
 } from './schema';
+import { PLUGIN_NAME } from '../../constants';
 
 export async function terraformBackendGenerator(
   tree: Tree,
@@ -23,6 +24,12 @@ export async function terraformBackendGenerator(
     projectType: 'application',
     sourceRoot: `${projectRoot}`,
     targets: {},
+    metadata: {
+      [PLUGIN_NAME]: {
+        projectType: 'backend',
+        backendType: normalizedOptions.backendType,
+      },
+    },
   });
 
   // Select template directory based on backendType
