@@ -1,3 +1,15 @@
+## 0.6.0 (2025-11-06)
+
+### 🚀 Features
+
+- add sync-terraform-metadata generator ([3719fc9](https://github.com/alexpialetski/nx-terraform/commit/3719fc9))
+- make preset backendType optional and improve generators ([06f5d94](https://github.com/alexpialetski/nx-terraform/commit/06f5d94))
+- add sync generator to terraform-init target and improve targets ([443c82c](https://github.com/alexpialetski/nx-terraform/commit/443c82c))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+
 ## 0.5.0 (2025-11-03)
 
 ### 🚀 Features
