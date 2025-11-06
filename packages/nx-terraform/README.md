@@ -41,12 +41,12 @@ This will:
 
 1. **Initialize the plugin** (if not using `create-nx-terraform-app`):
    ```bash
-   nx g @nx-terraform/plugin:init
+   nx g nx-terraform:init
    ```
 
 2. **Create a Terraform backend project**:
    ```bash
-   nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=aws-s3
+   nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
    ```
 
 3. **Apply the backend** (to create the state storage infrastructure):
@@ -56,9 +56,8 @@ This will:
 
 4. **Create a Terraform module**:
    ```bash
-   nx g @nx-terraform/plugin:terraform-module my-infra \
-     --backendProject=my-backend \
-     --backendType=aws-s3
+   nx g nx-terraform:terraform-module my-infra \
+     --backendProject=my-backend
    ```
 
 5. **Use Terraform targets**:
@@ -101,7 +100,7 @@ The plugin supports three types of Terraform projects:
 
 2. **Stateful Projects** (`application` with `backendProject` metadata):
    - Infrastructure projects that use remote state
-   - Reference backend project via `metadata.backendProject`
+   - Reference backend project via `metadata['nx-terraform'].backendProject`
    - Full target set (no caching for init/plan due to state)
 
 3. **Module Projects** (`library`):
@@ -117,7 +116,7 @@ The plugin automatically manages dependencies between Terraform projects using t
 
 The plugin automatically detects and creates dependencies in two ways:
 
-1. **Backend Project Dependencies**: Projects with `metadata.backendProject` in their `project.json` automatically depend on their backend project. This ensures backend projects are applied before stateful projects initialize.
+1. **Backend Project Dependencies**: Projects with `metadata['nx-terraform'].backendProject` in their `project.json` automatically depend on their backend project. This ensures backend projects are applied before stateful projects initialize.
 
 2. **Module Reference Dependencies**: The plugin analyzes `.tf` files to detect module references using local paths (e.g., `source = "../../packages/networking"`). When a module block references another Terraform project, a dependency is automatically created.
 
@@ -155,14 +154,14 @@ Intelligent caching for safe operations:
 
 ## Generators
 
-The plugin provides four generators:
+The plugin provides five generators:
 
 ### `init` Generator
 
 Registers the `nx-terraform` plugin in your workspace.
 
 ```bash
-nx g @nx-terraform/plugin:init
+nx g nx-terraform:init
 ```
 
 **Documentation**: [`packages/nx-terraform/src/generators/init/README.md`](./src/generators/init/README.md)
@@ -172,7 +171,7 @@ nx g @nx-terraform/plugin:init
 Creates a Terraform backend project for managing remote state.
 
 ```bash
-nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
 ```
 
 **Options**:
@@ -188,18 +187,16 @@ Creates Terraform modules (simple library or stateful application).
 
 ```bash
 # Simple module (library)
-nx g @nx-terraform/plugin:terraform-module my-module --backendType=local
+nx g nx-terraform:terraform-module my-module
 
 # Stateful module (application)
-nx g @nx-terraform/plugin:terraform-module my-infra \
-  --backendProject=my-backend \
-  --backendType=aws-s3
+nx g nx-terraform:terraform-module my-infra \
+  --backendProject=my-backend
 ```
 
 **Options**:
 - `name`: Module name (required)
-- `backendType`: 'aws-s3' or 'local' (required)
-- `backendProject`: Backend project name (optional, creates stateful module if provided)
+- `backendProject`: Backend project name (optional, creates stateful module if provided). The backend type is automatically derived from the backend project's metadata.
 
 **Documentation**: [`packages/nx-terraform/src/generators/terraform-module/README.md`](./src/generators/terraform-module/README.md)
 
@@ -208,10 +205,22 @@ nx g @nx-terraform/plugin:terraform-module my-infra \
 Initializes workspace with Terraform setup (used by `create-nx-terraform-app`).
 
 ```bash
-nx g @nx-terraform/plugin:preset --projectName=terraform-setup --backendType=aws-s3
+nx g nx-terraform:preset --projectName=terraform-setup --backendType=aws-s3
 ```
 
 **Documentation**: [`packages/nx-terraform/src/generators/preset/README.md`](./src/generators/preset/README.md)
+
+### `sync-terraform-metadata` Generator
+
+Automatically syncs Terraform project metadata based on `.tf` file analysis.
+
+```bash
+nx g nx-terraform:sync-terraform-metadata
+```
+
+This generator scans all Terraform projects and updates `projectType` metadata based on the presence of backend blocks in `.tf` files. It's designed to be run as a global sync generator.
+
+**Documentation**: [`packages/nx-terraform/src/generators/sync-terraform-metadata/README.md`](./src/generators/sync-terraform-metadata/README.md)
 
 ## Targets
 
@@ -314,14 +323,16 @@ packages/
 
 ### Project Configuration
 
-For **stateful projects**, configure `metadata.backendProject`:
+For **stateful projects**, configure `metadata['nx-terraform'].backendProject`:
 
 ```json
 {
   "root": "packages/my-infra",
   "projectType": "application",
   "metadata": {
-    "backendProject": "my-backend"
+    "nx-terraform": {
+      "backendProject": "my-backend"
+    }
   }
 }
 ```
@@ -337,7 +348,7 @@ The plugin supports two backend types:
 Production-ready remote state storage using AWS S3:
 
 ```bash
-nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
 ```
 
 **Features**:
@@ -351,7 +362,7 @@ nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=aws-s3
 Local state files for development:
 
 ```bash
-nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=local
+nx g nx-terraform:terraform-backend my-backend --backendType=local
 ```
 
 **Use Cases**:
@@ -394,23 +405,20 @@ nx run terraform-infra:terraform-plan --configuration=dev
 nx run terraform-infra:terraform-apply --configuration=dev
 
 # 4. (Optional) Create additional infrastructure modules
-nx g @nx-terraform/plugin:terraform-module web-infra \
-  --backendProject=terraform-setup \
-  --backendType=aws-s3
+nx g nx-terraform:terraform-module web-infra \
+  --backendProject=terraform-setup
 ```
 
 ### Multiple Environments
 
 ```bash
 # Create dev environment
-nx g @nx-terraform/plugin:terraform-module dev-infra \
-  --backendProject=terraform-setup \
-  --backendType=aws-s3
+nx g nx-terraform:terraform-module dev-infra \
+  --backendProject=terraform-setup
 
 # Create prod environment
-nx g @nx-terraform/plugin:terraform-module prod-infra \
-  --backendProject=terraform-setup \
-  --backendType=aws-s3
+nx g nx-terraform:terraform-module prod-infra \
+  --backendProject=terraform-setup
 
 # Deploy to dev
 nx run dev-infra:terraform-plan --configuration=dev
@@ -425,12 +433,11 @@ nx run prod-infra:terraform-apply --configuration=prod
 
 ```bash
 # Create reusable networking module
-nx g @nx-terraform/plugin:terraform-module networking --backendType=local
+nx g nx-terraform:terraform-module networking
 
 # Create web app that uses the networking module
-nx g @nx-terraform/plugin:terraform-module web-app \
-  --backendProject=terraform-setup \
-  --backendType=aws-s3
+nx g nx-terraform:terraform-module web-app \
+  --backendProject=terraform-setup
 ```
 
 Then reference the module in your Terraform code:
@@ -450,7 +457,7 @@ The plugin automatically discovers Terraform projects using:
 
 - **Pattern**: `**/main.tf` (looks for `main.tf` files recursively)
 - **Requirement**: Projects must have `project.json` in the same directory
-- **Type Detection**: Based on `projectType` and `metadata.backendProject`
+- **Type Detection**: Based on `projectType` and `metadata['nx-terraform'].backendProject`
 
 Projects are discovered on workspace load, so new projects are automatically available without restarting Nx.
 
@@ -506,6 +513,7 @@ Comprehensive documentation is available for each component:
   - [`terraform-backend`](./src/generators/terraform-backend/README.md) - Backend project creation
   - [`terraform-module`](./src/generators/terraform-module/README.md) - Module creation
   - [`preset`](./src/generators/preset/README.md) - Workspace preset
+  - [`sync-terraform-metadata`](./src/generators/sync-terraform-metadata/README.md) - Metadata synchronization
 
 - **Workspace Creation**:
   - [`create-nx-terraform-app`](../create-nx-terraform-app/README.md) - CLI tool for workspace creation

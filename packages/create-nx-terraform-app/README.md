@@ -59,7 +59,7 @@ my-terraform-workspace/
     │   ├── variables.tf
     │   └── backend.config    # Generated after first apply
     └── terraform-infra/      # Initial Terraform stateful module
-        ├── project.json      # Contains metadata.backendProject: 'terraform-setup'
+        ├── project.json      # Contains metadata['nx-terraform'].backendProject: 'terraform-setup'
         ├── main.tf
         ├── backend.tf        # References terraform-setup backend
         ├── provider.tf
@@ -180,12 +180,11 @@ Once your workspace is created:
 3. **Create Additional Modules** (optional):
    ```bash
    # Simple module (library)
-   nx g @nx-terraform/plugin:terraform-module my-module --backendType=local
+   nx g nx-terraform:terraform-module my-module
    
    # Stateful module (application)
-   nx g @nx-terraform/plugin:terraform-module my-infra \
-     --backendProject=terraform-setup \
-     --backendType=aws-s3
+   nx g nx-terraform:terraform-module my-infra \
+     --backendProject=terraform-setup
    ```
 
 4. **Start Developing**:
@@ -209,7 +208,7 @@ The CLI provides:
 
 ## Related Packages
 
-- **@nx-terraform/plugin**: The main plugin package containing generators and targets
+- **nx-terraform**: The main plugin package containing generators and targets
 - **create-nx-workspace**: Core Nx workspace creation functionality
 
 ## Development
