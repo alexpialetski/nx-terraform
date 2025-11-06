@@ -11,8 +11,9 @@ import {
   parseTerraformFile,
   readTerraformFile,
   isLocalPath,
-} from './fileParser';
+} from '../utils/fileParser';
 import { createStaticDependency, validateAndAddDependency } from './utils';
+import { PLUGIN_NAME } from '../constants';
 
 /**
  * Creates dependencies between Terraform projects by:
@@ -28,7 +29,8 @@ export const createDependencies: CreateDependencies<
     // ----------------------------------------------------------------
     // Static dependencies from projects to their backend projects
     // ----------------------------------------------------------------
-    const backendProject = projectConfig.metadata?.backendProject;
+    const backendProject =
+      projectConfig.metadata?.[PLUGIN_NAME]?.backendProject;
 
     if (backendProject) {
       // Verify backend project exists

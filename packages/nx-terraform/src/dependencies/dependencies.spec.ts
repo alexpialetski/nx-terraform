@@ -1,18 +1,12 @@
 import { CreateDependenciesContext, DependencyType } from '@nx/devkit';
 import { join } from 'path';
 import { readFileSync } from 'fs';
-import * as hcl2json from '@cdktf/hcl2json';
 import { createDependencies } from './createDependencies';
 
 // Mock fs.readFileSync
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
   readFileSync: jest.fn(),
-}));
-
-// Mock hcl2json.parse
-jest.mock('@cdktf/hcl2json', () => ({
-  parse: jest.fn(),
 }));
 
 // Mock validateDependency to always pass
@@ -22,7 +16,6 @@ jest.mock('@nx/devkit', () => ({
 }));
 
 const readFileSyncMock = jest.mocked(readFileSync);
-const hcl2jsonParseMock = jest.mocked(hcl2json.parse);
 
 function createTestContext(
   projects: CreateDependenciesContext['projects'],
@@ -68,15 +61,6 @@ module "networking" {
 `;
 
     readFileSyncMock.mockReturnValue(mainTfContent);
-    hcl2jsonParseMock.mockResolvedValue({
-      module: {
-        networking: [
-          {
-            source: '../networking',
-          },
-        ],
-      },
-    });
 
     const ctx = createTestContext(
       {
@@ -87,7 +71,7 @@ module "networking" {
         },
         networking: {
           root: moduleProjectRoot,
-          projectType: 'library',
+          projectType: 'application',
           targets: {},
         },
       },
@@ -114,7 +98,6 @@ module "networking" {
       join(workspaceRoot, mainTfPath),
       'utf-8'
     );
-    expect(hcl2json.parse).toHaveBeenCalledWith(mainTfPath, mainTfContent);
   });
 
   it('should skip remote module sources', async () => {
@@ -131,15 +114,6 @@ module "vpc" {
 `;
 
     readFileSyncMock.mockReturnValue(mainTfContent);
-    hcl2jsonParseMock.mockResolvedValue({
-      module: {
-        vpc: [
-          {
-            source: 'terraform-aws-modules/vpc/aws',
-          },
-        ],
-      },
-    });
 
     const ctx = createTestContext(
       {
@@ -176,15 +150,6 @@ module "local" {
 `;
 
     readFileSyncMock.mockReturnValue(mainTfContent);
-    hcl2jsonParseMock.mockResolvedValue({
-      module: {
-        local: [
-          {
-            source: '.',
-          },
-        ],
-      },
-    });
 
     const ctx = createTestContext(
       {
@@ -229,20 +194,6 @@ module "security" {
 `;
 
     readFileSyncMock.mockReturnValue(mainTfContent);
-    hcl2jsonParseMock.mockResolvedValue({
-      module: {
-        networking: [
-          {
-            source: '../networking',
-          },
-        ],
-        security: [
-          {
-            source: '../security',
-          },
-        ],
-      },
-    });
 
     const ctx = createTestContext(
       {
@@ -253,12 +204,12 @@ module "security" {
         },
         networking: {
           root: module1Root,
-          projectType: 'library',
+          projectType: 'application',
           targets: {},
         },
         security: {
           root: module2Root,
-          projectType: 'library',
+          projectType: 'application',
           targets: {},
         },
       },
@@ -303,17 +254,6 @@ module "security" {
     readFileSyncMock
       .mockReturnValueOnce(mainTfContent)
       .mockReturnValueOnce(computeTfContent);
-    hcl2jsonParseMock
-      .mockResolvedValueOnce({
-        module: {
-          networking: [{ source: '../networking' }],
-        },
-      })
-      .mockResolvedValueOnce({
-        module: {
-          compute: [{ source: '../compute' }],
-        },
-      });
 
     const ctx = createTestContext(
       {
@@ -324,12 +264,12 @@ module "security" {
         },
         networking: {
           root: module1Root,
-          projectType: 'library',
+          projectType: 'application',
           targets: {},
         },
         compute: {
           root: module2Root,
-          projectType: 'library',
+          projectType: 'application',
           targets: {},
         },
       },
@@ -366,7 +306,6 @@ module "security" {
     const invalidContent = 'invalid hcl syntax {{{{';
 
     readFileSyncMock.mockReturnValue(invalidContent);
-    hcl2jsonParseMock.mockRejectedValue(new Error('Parse error'));
 
     const ctx = createTestContext(
       {
@@ -441,7 +380,9 @@ module "security" {
           projectType: 'application',
           targets: {},
           metadata: {
-            backendProject: 'terraform-setup',
+            'nx-terraform': {
+              backendProject: 'terraform-setup',
+            },
           },
         },
       },
@@ -469,11 +410,6 @@ module "security" {
     const mainTfContent = 'module "shared" { source = "../shared-module" }';
 
     readFileSyncMock.mockReturnValue(mainTfContent);
-    hcl2jsonParseMock.mockResolvedValue({
-      module: {
-        shared: [{ source: '../shared-module' }],
-      },
-    });
 
     const ctx = createTestContext(
       {
@@ -488,12 +424,14 @@ module "security" {
           projectType: 'application',
           targets: {},
           metadata: {
-            backendProject: 'terraform-setup',
+            'nx-terraform': {
+              backendProject: 'terraform-setup',
+            },
           },
         },
         'shared-module': {
           root: moduleProjectRoot,
-          projectType: 'library',
+          projectType: 'application',
           targets: {},
         },
       },
@@ -538,7 +476,9 @@ module "security" {
           projectType: 'application',
           targets: {},
           metadata: {
-            backendProject: 'non-existent-backend',
+            'nx-terraform': {
+              backendProject: 'non-existent-backend',
+            },
           },
         },
       },
