@@ -8,13 +8,13 @@ The `terraform-backend` generator creates a Terraform backend project that manag
 
 ```bash
 # Create AWS S3 backend
-nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
 
 # Create local backend
-nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=local
+nx g nx-terraform:terraform-backend my-backend --backendType=local
 
 # Create AWS S3 backend with custom bucket prefix
-nx g @nx-terraform/plugin:terraform-backend my-backend \
+nx g nx-terraform:terraform-backend my-backend \
   --backendType=aws-s3 \
   --bucketNamePrefix=myteam-terraform
 ```
@@ -60,6 +60,7 @@ packages/{name}/
 ### Project Configuration
 
 - **projectType**: `'application'`
+- **metadata['nx-terraform'].projectType**: `'backend'`
 - **root**: `packages/{name}`
 - **targets**: Empty (targets are inferred by the plugin)
 
@@ -113,7 +114,7 @@ const normalizeOptions = (options) => ({
 ### Basic AWS S3 Backend
 
 ```bash
-nx g @nx-terraform/plugin:terraform-backend production-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend production-backend --backendType=aws-s3
 ```
 
 Creates backend project that provisions S3 bucket for state storage.
@@ -121,7 +122,7 @@ Creates backend project that provisions S3 bucket for state storage.
 ### Custom Bucket Prefix
 
 ```bash
-nx g @nx-terraform/plugin:terraform-backend my-backend \
+nx g nx-terraform:terraform-backend my-backend \
   --backendType=aws-s3 \
   --bucketNamePrefix=myorg-terraform
 ```
@@ -131,7 +132,7 @@ Creates S3 bucket with name like: `myorg-terraform-123456789-us-east-1`
 ### Local Backend for Development
 
 ```bash
-nx g @nx-terraform/plugin:terraform-backend dev-backend --backendType=local
+nx g nx-terraform:terraform-backend dev-backend --backendType=local
 ```
 
 Creates simple local backend using local state files.
@@ -140,16 +141,16 @@ Creates simple local backend using local state files.
 
 ```bash
 # 1. Initialize plugin
-nx g @nx-terraform/plugin:init
+nx g nx-terraform:init
 
 # 2. Create backend
-nx g @nx-terraform/plugin:terraform-backend shared-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend shared-backend --backendType=aws-s3
 
 # 3. Apply backend (provisions infrastructure)
 nx run shared-backend:terraform-apply
 
 # 4. Backend.config is now available for other projects
-# Other projects can reference this backend via metadata.backendProject
+# Other projects can reference this backend via metadata['nx-terraform'].backendProject
 ```
 
 ## When to Use
@@ -183,12 +184,14 @@ terraform init -backend-config=../{backend-project}/backend.config
 
 ## Integration with Other Projects
 
-Backend projects are referenced by stateful Terraform modules via `metadata.backendProject` in their `project.json`:
+Backend projects are referenced by stateful Terraform modules via `metadata['nx-terraform'].backendProject` in their `project.json`:
 
 ```json
 {
   "metadata": {
-    "backendProject": "shared-backend"
+    "nx-terraform": {
+      "backendProject": "shared-backend"
+    }
   }
 }
 ```
@@ -203,7 +206,8 @@ This allows stateful modules to automatically use the backend configuration duri
 
 ## Notes
 
-- Backend projects have `projectType: 'application'` without `metadata.backendProject`
+- Backend projects have `projectType: 'application'` with `metadata['nx-terraform'].projectType: 'backend'`
+- Backend projects do not have `metadata['nx-terraform'].backendProject` (they are the backend, not consumers of it)
 - The plugin automatically infers Terraform targets for backend projects
 - Backend projects must be applied before stateful projects can use them
 - The `backend.config` file is generated as part of the backend project's Terraform output

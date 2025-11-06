@@ -8,17 +8,11 @@ The `terraform-module` generator creates Terraform modules that can be either re
 
 ```bash
 # Create simple module (library, no backend)
-nx g @nx-terraform/plugin:terraform-module my-module --backendType=local
+nx g nx-terraform:terraform-module my-module
 
 # Create stateful module (application with backend)
-nx g @nx-terraform/plugin:terraform-module my-infra \
-  --backendProject=shared-backend \
-  --backendType=aws-s3
-
-# Create stateful module with local backend
-nx g @nx-terraform/plugin:terraform-module my-service \
-  --backendProject=dev-backend \
-  --backendType=local
+nx g nx-terraform:terraform-module my-infra \
+  --backendProject=shared-backend
 ```
 
 ## Options
@@ -26,16 +20,16 @@ nx g @nx-terraform/plugin:terraform-module my-service \
 | Option | Type | Required | Default | Description |
 |--------|------|----------|---------|-------------|
 | `name` | string | Yes | - | Name of the Terraform module (positional argument) |
-| `backendType` | 'aws-s3' \| 'local' | Yes | - | Backend type (required even for simple modules) |
-| `backendProject` | string | No | - | Name of existing backend project to use. When provided, creates a stateful module (application). When omitted, creates a simple module (library). |
+| `backendProject` | string | No | - | Name of existing backend project to use. When provided, creates a stateful module connected to the backend. The backend type is automatically derived from the backend project's metadata. When omitted, creates a simple standalone module. |
 
 ## Module Types
 
-### Simple Module (Library)
+### Simple Module
 
 **Characteristics:**
-- `projectType: 'library'`
-- No `metadata.backendProject`
+- `projectType: 'application'`
+- `metadata['nx-terraform'].projectType: 'module'`
+- No `metadata['nx-terraform'].backendProject`
 - No backend configuration
 - Reusable Terraform code without state management
 - Used by other projects via module references
@@ -46,11 +40,12 @@ nx g @nx-terraform/plugin:terraform-module my-service \
 - Modules consumed by other Terraform projects
 - Shared configurations, policies, or patterns
 
-### Stateful Module (Application)
+### Stateful Module
 
 **Characteristics:**
 - `projectType: 'application'`
-- `metadata.backendProject` points to backend project
+- `metadata['nx-terraform'].projectType: 'module'`
+- `metadata['nx-terraform'].backendProject` points to backend project
 - Backend configuration references `backend.config` from backend project
 - Manages its own infrastructure state
 - Full Terraform lifecycle support
@@ -67,7 +62,7 @@ nx g @nx-terraform/plugin:terraform-module my-service \
 
 ```
 packages/{name}/
-├── project.json              # projectType: 'library'
+├── project.json              # projectType: 'application', metadata['nx-terraform'].projectType: 'module'
 ├── main.tf                    # Module resources
 ├── variables.tf               # Input variables
 ├── outputs.tf                 # Output values
@@ -79,7 +74,7 @@ packages/{name}/
 
 ```
 packages/{name}/
-├── project.json              # projectType: 'application', metadata.backendProject
+├── project.json              # projectType: 'application', metadata['nx-terraform'].projectType: 'module', metadata['nx-terraform'].backendProject
 ├── main.tf                   # Infrastructure resources
 ├── backend.tf                # Backend configuration (s3 or local)
 ├── provider.tf               # Provider requirements
@@ -115,38 +110,39 @@ packages/{name}/
 
 **Validation Logic:**
 ```typescript
-if (normalizedOptions.backendProject) {
-  // Validates backend project exists
-  const backendConfig = readProjectConfiguration(tree, normalizedOptions.backendProject);
-  if (!backendConfig) {
-    throw new Error('Backend project not found');
-  }
-  
-  // Requires backendType when backendProject is provided
-  // (enforced by schema validation)
-}
+// When backendProject is provided, getBackendTypeFromProject validates:
+// 1. Backend project exists
+// 2. Backend project has backendType in metadata
+// Throws error if validation fails
 ```
 
 **Normalization:**
 ```typescript
-const normalizeOptions = (options) => ({
+const normalizeOptions = (tree, options) => ({
   ...options,
   backendProject: options.backendProject || null,
-  backendType: options.backendType || null,
+  backendType: getBackendTypeFromProject(tree, options.backendProject), // Derived from backend project metadata
   ignoreFile: '.gitignore',
   tmpl: '',  // Required to strip __tmpl__ suffix from template filenames
 });
 ```
 
+**Backend Type Derivation:**
+- When `backendProject` is provided, the `backendType` is automatically retrieved from the backend project's metadata (`metadata['nx-terraform'].backendType`)
+- This ensures consistency - the module always uses the same backend type as the backend project
+- If the backend project doesn't have `backendType` in metadata, an error is thrown
+
 **Project Type Determination:**
-- Simple module: `backendProject` is null/undefined → `projectType: 'library'`
-- Stateful module: `backendProject` is provided → `projectType: 'application'`
+- All modules: `projectType: 'application'` with `metadata['nx-terraform'].projectType: 'module'`
+- Simple module: `backendProject` is null/undefined → no `metadata['nx-terraform'].backendProject`
+- Stateful module: `backendProject` is provided → includes `metadata['nx-terraform'].backendProject`
 
 **Backend Reference:**
 Stateful modules include metadata:
 ```json
 {
   "metadata": {
+    "terraformProjectType": "module",
     "backendProject": "shared-backend"
   }
 }
@@ -170,8 +166,7 @@ This enables automatic backend configuration lookup during `terraform-init`.
 
 ```bash
 # Create simple networking module
-nx g @nx-terraform/plugin:terraform-module networking \
-  --backendType=local
+nx g nx-terraform:terraform-module networking
 ```
 
 Use in other projects:
@@ -188,31 +183,29 @@ module "networking" {
 
 ```bash
 # First, create backend
-nx g @nx-terraform/plugin:terraform-backend shared-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend shared-backend --backendType=aws-s3
 
 # Apply backend
 nx run shared-backend:terraform-apply
 
 # Create stateful module using backend
-nx g @nx-terraform/plugin:terraform-module production-infra \
-  --backendProject=shared-backend \
-  --backendType=aws-s3
+nx g nx-terraform:terraform-module production-infra \
+  --backendProject=shared-backend
 ```
 
 ### Complete Workflow
 
 ```bash
 # 1. Initialize plugin
-nx g @nx-terraform/plugin:init
+nx g nx-terraform:init
 
 # 2. Create backend
-nx g @nx-terraform/plugin:terraform-backend shared-backend --backendType=aws-s3
+nx g nx-terraform:terraform-backend shared-backend --backendType=aws-s3
 nx run shared-backend:terraform-apply
 
 # 3. Create stateful module
-nx g @nx-terraform/plugin:terraform-module web-app \
-  --backendProject=shared-backend \
-  --backendType=aws-s3
+nx g nx-terraform:terraform-module web-app \
+  --backendProject=shared-backend
 
 # 4. Initialize and deploy
 nx run web-app:terraform-init
@@ -224,13 +217,12 @@ nx run web-app:terraform-apply
 
 ```bash
 # Create local backend for development
-nx g @nx-terraform/plugin:terraform-backend dev-backend --backendType=local
+nx g nx-terraform:terraform-backend dev-backend --backendType=local
 nx run dev-backend:terraform-apply
 
 # Create module using local backend
-nx g @nx-terraform/plugin:terraform-module dev-environment \
-  --backendProject=dev-backend \
-  --backendType=local
+nx g nx-terraform:terraform-module dev-environment \
+  --backendProject=dev-backend
 ```
 
 ## Backend Configuration
@@ -264,7 +256,7 @@ Stateful modules require a backend project to exist before creation:
 
 1. **Create backend first:**
    ```bash
-   nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=aws-s3
+   nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
    ```
 
 2. **Apply backend** (generates `backend.config`):
@@ -274,9 +266,8 @@ Stateful modules require a backend project to exist before creation:
 
 3. **Create module referencing backend:**
    ```bash
-   nx g @nx-terraform/plugin:terraform-module my-infra \
-     --backendProject=my-backend \
-     --backendType=aws-s3
+   nx g nx-terraform:terraform-module my-infra \
+     --backendProject=my-backend
    ```
 
 The generator validates that the backend project exists before creating the module.
@@ -298,10 +289,10 @@ This ensures proper initialization order.
 
 ## Notes
 
-- `backendType` is always required (even for simple modules) for API consistency
-- Simple modules don't use `backendType` value but it must be provided due to schema requirements
-- Stateful modules validate backend project existence before creation
-- EJS templates use conditional logic to generate appropriate backend configuration
+- `backendType` is automatically derived from the backend project's metadata when `backendProject` is provided
+- Simple modules don't require a backend project or backend type
+- Stateful modules validate backend project existence and retrieve backend type from metadata
+- EJS templates use conditional logic to generate appropriate backend configuration based on derived `backendType`
 - Template files with `__tmpl__` suffix are automatically processed by `generateFiles`
 - Simple modules have stub targets (modules don't have state to manage)
 - Stateful modules get full Terraform lifecycle targets with proper dependencies

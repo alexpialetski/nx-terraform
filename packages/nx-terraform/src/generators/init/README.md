@@ -7,7 +7,7 @@ The `init` generator adds the `nx-terraform` plugin to your Nx workspace configu
 ## Usage
 
 ```bash
-nx g @nx-terraform/plugin:init
+nx g nx-terraform:init
 ```
 
 ## Options
@@ -49,10 +49,10 @@ This generator has no options or parameters. It simply registers the plugin in y
 
 ```bash
 # Add nx-terraform plugin to workspace
-nx g @nx-terraform/plugin:init
+nx g nx-terraform:init
 
 # Now you can create Terraform projects
-nx g @nx-terraform/plugin:terraform-backend my-backend --backendType=local
+nx g nx-terraform:terraform-backend my-backend --backendType=local
 ```
 
 ### Verifying Plugin Registration
