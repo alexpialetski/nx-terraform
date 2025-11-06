@@ -54,31 +54,34 @@ async function determineProjectName(
 
 async function determineBackendType(
   parsedArgs: CreateNxTerraformArguments
-): Promise<'aws-s3' | 'local'> {
-  if (parsedArgs.backendType) {
+): Promise<'aws-s3' | 'local' | undefined> {
+  if (parsedArgs.backendType !== undefined) {
     return parsedArgs.backendType;
   }
 
-  const results = await enquirer.prompt<{ backendType: 'aws-s3' | 'local' }>([
+  const results = await enquirer.prompt<{
+    backendType: 'aws-s3' | 'local' | 'skip';
+  }>([
     {
       name: 'backendType',
-      message: `Terraform backend type (aws-s3 | local)`,
+      message: `Terraform backend type (aws-s3 | local) (optional)`,
       type: 'select',
       choices: [
-        { name: 'aws-s3', message: 'AWS S3 remote backend' },
+        { name: 'skip', message: 'Skip backend setup' },
         { name: 'local', message: 'Local backend' },
+        { name: 'aws-s3', message: 'AWS S3 remote backend' },
       ],
-      initial: 1,
+      initial: 0,
     },
   ]);
-  return results.backendType;
+  return results.backendType === 'skip' ? undefined : results.backendType;
 }
 
 interface CreateNxTerraformArguments extends CreateWorkspaceOptions {
   projectName: string;
   packageManager: PackageManager;
   allPrompts: boolean;
-  backendType: 'aws-s3' | 'local';
+  backendType?: 'aws-s3' | 'local';
 }
 
 export const commandsObject: yargs.Argv<CreateNxTerraformArguments> = yargs
@@ -100,7 +103,8 @@ export const commandsObject: yargs.Argv<CreateNxTerraformArguments> = yargs
             alias: ['name'],
           })
           .option('backendType', {
-            describe: 'Terraform backend type to configure (aws-s3 | local)',
+            describe:
+              'Terraform backend type to configure (aws-s3 | local). If not provided, no backend will be created.',
             choices: ['aws-s3', 'local'] as const,
             type: 'string',
           }),

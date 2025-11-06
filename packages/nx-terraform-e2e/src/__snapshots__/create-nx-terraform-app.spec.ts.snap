@@ -10,6 +10,10 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
       "packageName": "terraform-setup",
       "packageVersion": "0.1.0",
     },
+    "nx-terraform": {
+      "backendType": "local",
+      "projectType": "backend",
+    },
     "targetGroups": {
       "NPM Scripts": [
         "clean",
@@ -149,6 +153,9 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
         "{projectRoot}/.terraform.lock.hcl",
       ],
       "parallelism": true,
+      "syncGenerators": [
+        "nx-terraform:sync-terraform-metadata",
+      ],
     },
     "terraform-output": {
       "configurations": {},
@@ -247,7 +254,10 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "implicitDependencies": [],
   "metadata": {
-    "backendProject": "terraform-setup",
+    "nx-terraform": {
+      "backendProject": "terraform-setup",
+      "projectType": "module",
+    },
   },
   "name": "terraform-infra",
   "projectType": "application",
@@ -372,6 +382,9 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
         "{projectRoot}/.terraform.lock.hcl",
       ],
       "parallelism": true,
+      "syncGenerators": [
+        "nx-terraform:sync-terraform-metadata",
+      ],
     },
     "terraform-output": {
       "configurations": {},
