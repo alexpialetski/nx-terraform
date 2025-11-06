@@ -44,10 +44,15 @@ nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
 - **Create infrastructure modules**:
 
   ```bash
+  # Stateful module (with backend)
   nx g nx-terraform:terraform-module my-infra \
-    --backendProject=my-backend \
-    --backendType=aws-s3
+    --backendProject=my-backend
+  
+  # Simple module (no backend)
+  nx g nx-terraform:terraform-module my-module
   ```
+  
+  Note: When `--backendProject` is provided, the backend type is automatically derived from the backend project's metadata.
 
 - **Use Terraform targets**:
   ```bash
@@ -66,6 +71,7 @@ Comprehensive documentation is available:
   - [Terraform Backend Generator](./packages/nx-terraform/src/generators/terraform-backend/README.md) - Backend project creation
   - [Terraform Module Generator](./packages/nx-terraform/src/generators/terraform-module/README.md) - Module creation
   - [Preset Generator](./packages/nx-terraform/src/generators/preset/README.md) - Workspace preset
+  - [Sync Terraform Metadata Generator](./packages/nx-terraform/src/generators/sync-terraform-metadata/README.md) - Metadata synchronization
 
 ## Features
 

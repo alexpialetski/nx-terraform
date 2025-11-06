@@ -16,10 +16,10 @@ nx g nx-terraform:preset --projectName=terraform-setup --backendType=aws-s3
 
 ## Options
 
-| Option | Type | Required | Default | Description |
-|--------|------|----------|---------|-------------|
-| `projectName` | string | Yes | - | Name of the workspace (currently not used for project names, which are hardcoded). Also accepts `name` as alias. |
-| `backendType` | 'aws-s3' \| 'local' | No | - | Type of Terraform backend to scaffold. If not provided, only the plugin is initialized and no backend/module projects are created. |
+| Option        | Type                | Required | Default | Description                                                                                                                        |
+| ------------- | ------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `projectName` | string              | Yes      | -       | Name of the workspace (currently not used for project names, which are hardcoded). Also accepts `name` as alias.                   |
+| `backendType` | 'aws-s3' \| 'local' | No       | -       | Type of Terraform backend to scaffold. If not provided, only the plugin is initialized and no backend/module projects are created. |
 
 ### Backend Types
 
@@ -38,6 +38,7 @@ The preset generator performs these steps in sequence:
 ## Implementation Details
 
 **Generator Composition:**
+
 - Calls `initGenerator(tree)` to register the plugin
 - If `backendType` is provided:
   - Calls `terraformBackendGenerator(tree, {...})` with:
@@ -53,6 +54,7 @@ The preset generator performs these steps in sequence:
     - No `backendProject` (creates simple module)
 
 **Code Structure:**
+
 ```typescript
 // 1. Register plugin
 await initGenerator(tree);
@@ -75,10 +77,12 @@ await terraformModuleGenerator(tree, {
 ```
 
 **Code Location:**
+
 - Implementation: `packages/nx-terraform/src/generators/preset/generator.ts`
 - Schema: `packages/nx-terraform/src/generators/preset/schema.json`
 
 **Dependencies:**
+
 - Uses `init` generator internally
 - Uses `terraform-backend` generator internally
 - Uses `terraform-module` generator internally
@@ -106,15 +110,25 @@ npx create-nx-terraform-app my-terraform-workspace
 
 ### Direct Preset Usage (Advanced)
 
+**With backend (creates backend + stateful module):**
+
 ```bash
 nx g nx-terraform:preset \
-  --projectName=my-backend \
+  --projectName=my-workspace \
   --backendType=aws-s3
 ```
 
+**Without backend (creates simple module only):**
+
+```bash
+nx g nx-terraform:preset --projectName=my-workspace
+```
+
 This creates:
+
 - Plugin registration in `nx.json`
-- Backend project at `packages/my-backend/`
+- Backend project at `packages/terraform-setup/` (only if `--backendType` provided)
+- Module project at `packages/terraform-infra/`
 
 ## When to Use
 
@@ -160,4 +174,3 @@ If `backendType` is not provided, only `terraform-infra` is created as a simple 
 - The preset uses `x-use-standalone-layout: true`, making it suitable for workspace creation workflows
 - If `backendType` is provided, you get a fully functional Terraform workspace with both backend and stateful infrastructure module
 - If `backendType` is not provided, you get a workspace with plugin registration and a simple module (no backend)
-
