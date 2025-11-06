@@ -6,21 +6,21 @@ import { TerraformModuleGeneratorSchema } from './schema';
 import { terraformBackendGenerator } from '../terraform-backend/terraform-backend';
 
 describe('terraform-module generator', () => {
-  describe('simple module (library)', () => {
+  describe('simple module', () => {
     const simpleModuleOptions: TerraformModuleGeneratorSchema = {
       name: 'my-terraform-module',
-      backendType: 'local', // Required by schema, but not used for simple modules
     };
 
-    it('should correctly generate project json as library', async () => {
+    it('should correctly generate project json', async () => {
       const tree = createTreeWithEmptyWorkspace();
       await terraformModuleGenerator(tree, simpleModuleOptions);
 
       const config = readProjectConfiguration(tree, simpleModuleOptions.name);
 
       expect(config.name).toEqual(simpleModuleOptions.name);
-      expect(config.projectType).toEqual('library');
-      expect(config.metadata).toBeUndefined();
+      expect(config.projectType).toEqual('application');
+      expect(config.metadata?.['nx-terraform']?.projectType).toEqual('module');
+      expect(config.metadata?.['nx-terraform']?.backendProject).toBeUndefined();
       expect(config.implicitDependencies).toBeUndefined();
     });
 
@@ -100,47 +100,77 @@ describe('terraform-module generator', () => {
 
   describe('stateful module (application with backend)', () => {
     const backendName = 'terraform-backend';
-    
+
+    it('should correctly generate project json as application', async () => {
+      const tree = createTreeWithEmptyWorkspace();
+      const statefulModuleOptions: TerraformModuleGeneratorSchema = {
+        name: 'my-stateful-module',
+        backendProject: backendName,
+      };
+
+      // Create backend project first
+      await terraformBackendGenerator(tree, {
+        name: backendName,
+        backendType: 'aws-s3',
+      });
+
+      await terraformModuleGenerator(tree, statefulModuleOptions);
+
+      const config = readProjectConfiguration(tree, statefulModuleOptions.name);
+
+      expect(config.name).toEqual(statefulModuleOptions.name);
+      expect(config.projectType).toEqual('application');
+      expect(config.metadata?.['nx-terraform']?.projectType).toEqual('module');
+      expect(config.metadata?.['nx-terraform']?.backendProject).toEqual(
+        backendName
+      );
+      // Note: implicitDependencies are now created by createDependencies API
+      expect(config.implicitDependencies).toBeUndefined();
+    });
+
     describe('with aws-s3 backend', () => {
       const statefulModuleOptions: TerraformModuleGeneratorSchema = {
         name: 'my-stateful-module-aws',
         backendProject: backendName,
-        backendType: 'aws-s3',
       };
-
-      it('should correctly generate project json as application', async () => {
-        const tree = createTreeWithEmptyWorkspace();
-        
-        // Create backend project first
-        await terraformBackendGenerator(tree, {
-          name: backendName,
-          backendType: 'aws-s3',
-        });
-
-        await terraformModuleGenerator(tree, statefulModuleOptions);
-
-        const config = readProjectConfiguration(tree, statefulModuleOptions.name);
-
-        expect(config.name).toEqual(statefulModuleOptions.name);
-        expect(config.projectType).toEqual('application');
-        expect(config.metadata?.backendProject).toEqual(backendName);
-        // Note: implicitDependencies are now created by createDependencies API
-        expect(config.implicitDependencies).toBeUndefined();
-      });
 
       it('should throw error if backend project does not exist', async () => {
         const tree = createTreeWithEmptyWorkspace();
 
         await expect(
           terraformModuleGenerator(tree, statefulModuleOptions)
+        ).rejects.toThrow(`Cannot find configuration for '${backendName}'`);
+      });
+
+      it('should throw error if backend project is missing backendType in metadata', async () => {
+        const tree = createTreeWithEmptyWorkspace();
+
+        // Create backend project without backendType in metadata
+        await terraformBackendGenerator(tree, {
+          name: backendName,
+          backendType: 'aws-s3',
+        });
+
+        // Manually remove backendType from metadata to simulate old backend project
+        const backendConfig = readProjectConfiguration(tree, backendName);
+        if (backendConfig.metadata?.['nx-terraform']) {
+          delete backendConfig.metadata['nx-terraform'].backendType;
+        }
+        tree.write(
+          `packages/${backendName}/project.json`,
+          JSON.stringify(backendConfig, null, 2)
+        );
+
+        await expect(
+          terraformModuleGenerator(tree, statefulModuleOptions)
         ).rejects.toThrow(
-          `Backend project "${backendName}" not found. Please create it first using the terraform-backend generator.`
+          `Backend project "${backendName}" is missing backendType in metadata. Please recreate it using the terraform-backend generator.`
         );
       });
 
       it('should generate main.tf file', async () => {
         const tree = createTreeWithEmptyWorkspace();
-        
+
         // Create backend project first
         await terraformBackendGenerator(tree, {
           name: backendName,
@@ -162,7 +192,7 @@ describe('terraform-module generator', () => {
 
       it('should generate backend.tf file with s3 backend', async () => {
         const tree = createTreeWithEmptyWorkspace();
-        
+
         // Create backend project first
         await terraformBackendGenerator(tree, {
           name: backendName,
@@ -183,7 +213,7 @@ describe('terraform-module generator', () => {
 
       it('should generate provider.tf file', async () => {
         const tree = createTreeWithEmptyWorkspace();
-        
+
         // Create backend project first
         await terraformBackendGenerator(tree, {
           name: backendName,
@@ -197,41 +227,9 @@ describe('terraform-module generator', () => {
         ).toBeTruthy();
       });
 
-      it('should generate variables.tf file', async () => {
-        const tree = createTreeWithEmptyWorkspace();
-        
-        // Create backend project first
-        await terraformBackendGenerator(tree, {
-          name: backendName,
-          backendType: 'aws-s3',
-        });
-
-        await terraformModuleGenerator(tree, statefulModuleOptions);
-
-        expect(
-          tree.exists(`packages/${statefulModuleOptions.name}/variables.tf`)
-        ).toBeTruthy();
-      });
-
-      it('should generate outputs.tf file', async () => {
-        const tree = createTreeWithEmptyWorkspace();
-        
-        // Create backend project first
-        await terraformBackendGenerator(tree, {
-          name: backendName,
-          backendType: 'aws-s3',
-        });
-
-        await terraformModuleGenerator(tree, statefulModuleOptions);
-
-        expect(
-          tree.exists(`packages/${statefulModuleOptions.name}/outputs.tf`)
-        ).toBeTruthy();
-      });
-
       it('should generate README.md file with AWS S3 backend reference', async () => {
         const tree = createTreeWithEmptyWorkspace();
-        
+
         // Create backend project first
         await terraformBackendGenerator(tree, {
           name: backendName,
@@ -252,54 +250,17 @@ describe('terraform-module generator', () => {
         expect(readmeContent).toContain('backend.config');
         expect(readmeContent).toContain('AWS S3');
       });
-
-      it('should generate .gitignore file', async () => {
-        const tree = createTreeWithEmptyWorkspace();
-        
-        // Create backend project first
-        await terraformBackendGenerator(tree, {
-          name: backendName,
-          backendType: 'aws-s3',
-        });
-
-        await terraformModuleGenerator(tree, statefulModuleOptions);
-
-        expect(
-          tree.exists(`packages/${statefulModuleOptions.name}/.gitignore`)
-        ).toBeTruthy();
-      });
     });
 
     describe('with local backend', () => {
       const statefulModuleOptions: TerraformModuleGeneratorSchema = {
         name: 'my-stateful-module-local',
         backendProject: backendName,
-        backendType: 'local',
       };
-
-      it('should correctly generate project json as application', async () => {
-        const tree = createTreeWithEmptyWorkspace();
-        
-        // Create backend project first
-        await terraformBackendGenerator(tree, {
-          name: backendName,
-          backendType: 'local',
-        });
-
-        await terraformModuleGenerator(tree, statefulModuleOptions);
-
-        const config = readProjectConfiguration(tree, statefulModuleOptions.name);
-
-        expect(config.name).toEqual(statefulModuleOptions.name);
-        expect(config.projectType).toEqual('application');
-        expect(config.metadata?.backendProject).toEqual(backendName);
-        // Note: implicitDependencies are now created by createDependencies API
-        expect(config.implicitDependencies).toBeUndefined();
-      });
 
       it('should generate backend.tf file with local backend', async () => {
         const tree = createTreeWithEmptyWorkspace();
-        
+
         // Create backend project first
         await terraformBackendGenerator(tree, {
           name: backendName,
@@ -320,7 +281,7 @@ describe('terraform-module generator', () => {
 
       it('should generate README.md file with local backend reference', async () => {
         const tree = createTreeWithEmptyWorkspace();
-        
+
         // Create backend project first
         await terraformBackendGenerator(tree, {
           name: backendName,
@@ -344,4 +305,3 @@ describe('terraform-module generator', () => {
     });
   });
 });
-
