@@ -76,6 +76,30 @@ export function extractModuleBlocks(parsed: any): Array<{
 }
 
 /**
+ * Checks if a parsed HCL structure contains a backend block
+ * Backend blocks are structured as:
+ * terraform {
+ *   backend "s3" { ... }
+ * }
+ * Which parses to: parsed.terraform[0].backend
+ */
+export function hasBackendBlock(parsed: any): boolean {
+  const terraformBlocks = parsed.terraform;
+  if (!terraformBlocks || !Array.isArray(terraformBlocks)) {
+    return false;
+  }
+
+  // Check each terraform block for a backend property
+  for (const terraformBlock of terraformBlocks) {
+    if (terraformBlock?.backend) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Gets all .tf files to process for a project
  */
 export function getTerraformFilesToProcess(
