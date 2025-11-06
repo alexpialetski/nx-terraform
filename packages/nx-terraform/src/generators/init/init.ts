@@ -1,6 +1,5 @@
 import { formatFiles, readNxJson, Tree, updateNxJson } from '@nx/devkit';
-
-const PLUGIN_NAME = 'nx-terraform';
+import { PLUGIN_NAME } from '../../constants';
 
 export async function initGenerator(tree: Tree) {
   const nxJson = readNxJson(tree) || {};
