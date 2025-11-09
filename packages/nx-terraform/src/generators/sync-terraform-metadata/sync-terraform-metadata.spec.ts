@@ -346,4 +346,294 @@ describe('sync-terraform-metadata generator', () => {
       syncTerraformMetadataGenerator(tree, {})
     ).resolves.not.toThrow();
   });
+
+  it('should not create provider.tf when it does not exist', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    const projectName = 'my-terraform-project';
+    const projectRoot = `packages/${projectName}`;
+
+    addProjectConfiguration(tree, projectName, {
+      root: projectRoot,
+      projectType: 'application',
+      targets: {},
+      metadata: {
+        'nx-terraform': {
+          projectType: 'module',
+        },
+      },
+    });
+
+    // Create .tf file with AWS provider block
+    tree.write(
+      `${projectRoot}/main.tf`,
+      `
+      provider "aws" {
+        region = "us-east-1"
+      }
+    `
+    );
+
+    await syncTerraformMetadataGenerator(tree, {});
+
+    // Check that provider.tf was NOT created
+    expect(tree.exists(`${projectRoot}/provider.tf`)).toBe(false);
+  });
+
+  it('should update metadata comment when providers match', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    const projectName = 'my-terraform-project';
+    const projectRoot = `packages/${projectName}`;
+
+    addProjectConfiguration(tree, projectName, {
+      root: projectRoot,
+      projectType: 'application',
+      targets: {},
+      metadata: {
+        'nx-terraform': {
+          projectType: 'module',
+        },
+      },
+    });
+
+    // Create provider.tf with AWS provider and metadata comment
+    tree.write(
+      `${projectRoot}/provider.tf`,
+      `# nx-terraform-metadata-start
+# aws
+# nx-terraform-metadata-end
+
+provider "aws" {
+  region = "us-east-1"
+}
+`
+    );
+
+    // Create .tf file with AWS provider block
+    tree.write(
+      `${projectRoot}/main.tf`,
+      `
+      provider "aws" {
+        region = "us-east-1"
+      }
+    `
+    );
+
+    await syncTerraformMetadataGenerator(tree, {});
+
+    // Check that provider.tf has metadata comment
+    const providerTfContent = tree.read(
+      `${projectRoot}/provider.tf`,
+      'utf-8'
+    );
+    expect(providerTfContent).toContain('nx-terraform-metadata-start');
+    expect(providerTfContent).toContain('aws');
+  });
+
+  it('should not create provider.tf when multiple providers detected in different files', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    const projectName = 'my-terraform-project';
+    const projectRoot = `packages/${projectName}`;
+
+    addProjectConfiguration(tree, projectName, {
+      root: projectRoot,
+      projectType: 'application',
+      targets: {},
+      metadata: {
+        'nx-terraform': {
+          projectType: 'module',
+        },
+      },
+    });
+
+    // Create files with different provider blocks
+    tree.write(
+      `${projectRoot}/main.tf`,
+      `
+      provider "aws" {
+        region = "us-east-1"
+      }
+    `
+    );
+
+    tree.write(
+      `${projectRoot}/providers.tf`,
+      `
+      provider "local" {}
+    `
+    );
+
+    await syncTerraformMetadataGenerator(tree, {});
+
+    // Check that provider.tf was NOT created
+    expect(tree.exists(`${projectRoot}/provider.tf`)).toBe(false);
+  });
+
+  it('should update metadata comment to remove unused providers', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    const projectName = 'my-terraform-project';
+    const projectRoot = `packages/${projectName}`;
+
+    addProjectConfiguration(tree, projectName, {
+      root: projectRoot,
+      projectType: 'application',
+      targets: {},
+      metadata: {
+        'nx-terraform': {
+          projectType: 'module',
+        },
+      },
+    });
+
+    // Create provider.tf with both AWS and local providers in metadata
+    tree.write(
+      `${projectRoot}/provider.tf`,
+      `# nx-terraform-metadata-start
+# aws,local
+# nx-terraform-metadata-end
+
+provider "aws" {
+  region = "us-east-1"
+}
+`
+    );
+
+    // Create .tf file with only AWS provider (no local)
+    tree.write(
+      `${projectRoot}/main.tf`,
+      `
+      provider "aws" {
+        region = "us-east-1"
+      }
+    `
+    );
+
+    await syncTerraformMetadataGenerator(tree, {});
+
+    // Check that provider.tf metadata only has AWS provider
+    const providerTfContent = tree.read(
+      `${projectRoot}/provider.tf`,
+      'utf-8'
+    );
+    expect(providerTfContent).toContain('nx-terraform-metadata-start');
+    expect(providerTfContent).toContain('aws');
+    expect(providerTfContent).not.toContain('local');
+  });
+
+  it('should not update provider.tf if providers have not changed', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    const projectName = 'my-terraform-project';
+    const projectRoot = `packages/${projectName}`;
+
+    addProjectConfiguration(tree, projectName, {
+      root: projectRoot,
+      projectType: 'application',
+      targets: {},
+      metadata: {
+        'nx-terraform': {
+          projectType: 'module',
+        },
+      },
+    });
+
+    // Create provider.tf with AWS provider and matching metadata
+    const originalContent = `# nx-terraform-metadata-start
+# providers: aws
+# nx-terraform-metadata-end
+
+provider "aws" {
+  region = "us-east-1"
+}
+`;
+    tree.write(`${projectRoot}/provider.tf`, originalContent);
+
+    // Create .tf file with AWS provider block
+    tree.write(
+      `${projectRoot}/main.tf`,
+      `
+      provider "aws" {
+        region = "us-east-1"
+      }
+    `
+    );
+
+    await syncTerraformMetadataGenerator(tree, {});
+
+    // Check that provider.tf content is unchanged
+    const providerTfContent = tree.read(
+      `${projectRoot}/provider.tf`,
+      'utf-8'
+    );
+    expect(providerTfContent).toBe(originalContent);
+  });
+
+  it('should not create provider.tf when providers are in multiple files', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    const projectName = 'my-terraform-project';
+    const projectRoot = `packages/${projectName}`;
+
+    addProjectConfiguration(tree, projectName, {
+      root: projectRoot,
+      projectType: 'application',
+      targets: {},
+      metadata: {
+        'nx-terraform': {
+          projectType: 'module',
+        },
+      },
+    });
+
+    // Create .tf files with provider blocks
+    tree.write(
+      `${projectRoot}/main.tf`,
+      `
+      provider "aws" {
+        region = "us-east-1"
+      }
+    `
+    );
+
+    tree.write(
+      `${projectRoot}/providers.tf`,
+      `
+      provider "local" {}
+    `
+    );
+
+    await syncTerraformMetadataGenerator(tree, {});
+
+    // Check that provider.tf was NOT created
+    expect(tree.exists(`${projectRoot}/provider.tf`)).toBe(false);
+  });
+
+  it('should not create provider.tf when providers are detected', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    const projectName = 'my-terraform-project';
+    const projectRoot = `packages/${projectName}`;
+
+    addProjectConfiguration(tree, projectName, {
+      root: projectRoot,
+      projectType: 'application',
+      targets: {},
+      metadata: {
+        'nx-terraform': {
+          projectType: 'module',
+        },
+      },
+    });
+
+    // Create .tf file with provider block
+    tree.write(
+      `${projectRoot}/main.tf`,
+      `
+      provider "google" {
+        project = "my-project"
+      }
+    `
+    );
+
+    await syncTerraformMetadataGenerator(tree, {});
+
+    // Check that provider.tf was NOT created
+    expect(tree.exists(`${projectRoot}/provider.tf`)).toBe(false);
+  });
 });

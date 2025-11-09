@@ -28,7 +28,6 @@ export async function presetGenerator(
     name: 'terraform-infra',
     ...(options.backendType && {
       backendProject: 'terraform-setup',
-      backendType: options.backendType,
     }),
   });
 

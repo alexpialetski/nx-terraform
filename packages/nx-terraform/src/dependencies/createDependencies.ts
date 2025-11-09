@@ -5,14 +5,12 @@ import {
 } from '@nx/devkit';
 import * as path from 'node:path';
 import { NxTerraformPluginOptions } from '../types';
+import { DependenciesTerraformFileParser } from './DependenciesTerraformFileParser';
 import {
-  extractModuleBlocks,
-  getTerraformFilesToProcess,
-  parseTerraformFile,
-  readTerraformFile,
+  createStaticDependency,
+  validateAndAddDependency,
   isLocalPath,
-} from '../utils/fileParser';
-import { createStaticDependency, validateAndAddDependency } from './utils';
+} from './utils';
 import { PLUGIN_NAME } from '../constants';
 
 /**
@@ -51,33 +49,18 @@ export const createDependencies: CreateDependencies<
     // Static dependencies from projects to their module projects
     // ----------------------------------------------------------------
 
-    // Find .tf files to process in this project (only changed files)
-    const tfFilesToProcess = getTerraformFilesToProcess(
-      ctx.filesToProcess.projectFileMap[projectName] ?? []
+    // Get files to process for this project
+    const filesToProcess = ctx.filesToProcess.projectFileMap[projectName] ?? [];
+
+    // Use DependenciesTerraformFileParser to parse all files
+    const parser = new DependenciesTerraformFileParser(
+      filesToProcess,
+      ctx.workspaceRoot
     );
 
-    for (const file of tfFilesToProcess) {
-      const filePath = path.join(ctx.workspaceRoot, file.file);
-
-      // Read and parse the Terraform file
-      const { content: fileContent, success: readSuccess } = readTerraformFile(
-        filePath,
-        file.file
-      );
-      if (!readSuccess) {
-        continue;
-      }
-
-      const { parsed, success: parseSuccess } = await parseTerraformFile(
-        file.file,
-        fileContent
-      );
-      if (!parseSuccess) {
-        continue;
-      }
-
+    for await (const terraformFile of parser) {
       // Extract module blocks and process each one
-      for (const { source: sourcePath } of extractModuleBlocks(parsed)) {
+      for (const { source: sourcePath } of terraformFile.extractModules()) {
         // Only process local paths (./ or ../)
         if (!isLocalPath(sourcePath)) {
           continue;
@@ -96,8 +79,14 @@ export const createDependencies: CreateDependencies<
           continue;
         }
 
+        // Get the relative file path for the source file
+        const relativeFilePath = path.relative(
+          ctx.workspaceRoot,
+          terraformFile.filePath
+        );
+
         validateAndAddDependency(
-          createStaticDependency(projectName, targetProject, file.file),
+          createStaticDependency(projectName, targetProject, relativeFilePath),
           ctx,
           results
         );

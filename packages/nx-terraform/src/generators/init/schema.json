@@ -3,6 +3,5 @@
   "$id": "Init",
   "title": "",
   "type": "object",
-  "properties": {},
-  "required": ["name"]
+  "properties": {}
 }

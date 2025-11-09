@@ -1,21 +1,23 @@
 import { CreateDependenciesContext, DependencyType } from '@nx/devkit';
 import { join } from 'path';
-import { readFileSync } from 'fs';
-import { createDependencies } from './createDependencies';
+import { readFile } from 'fs/promises';
+import { createDependencies } from '../createDependencies';
 
-// Mock fs.readFileSync
-jest.mock('fs', () => ({
-  ...jest.requireActual('fs'),
-  readFileSync: jest.fn(),
+// Mock fs/promises.readFile
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn(),
 }));
 
-// Mock validateDependency to always pass
+// Mock validateDependency and logger to avoid console output during tests
 jest.mock('@nx/devkit', () => ({
   ...jest.requireActual('@nx/devkit'),
   validateDependency: jest.fn(), // Mock to do nothing (validates successfully)
+  logger: {
+    warn: jest.fn(),
+  },
 }));
 
-const readFileSyncMock = jest.mocked(readFileSync);
+const readFileMock = jest.mocked(readFile);
 
 function createTestContext(
   projects: CreateDependenciesContext['projects'],
@@ -60,7 +62,7 @@ module "networking" {
 }
 `;
 
-    readFileSyncMock.mockReturnValue(mainTfContent);
+    readFileMock.mockResolvedValue(mainTfContent);
 
     const ctx = createTestContext(
       {
@@ -94,7 +96,7 @@ module "networking" {
       sourceFile: mainTfPath,
       type: DependencyType.static,
     });
-    expect(readFileSync).toHaveBeenCalledWith(
+    expect(readFile).toHaveBeenCalledWith(
       join(workspaceRoot, mainTfPath),
       'utf-8'
     );
@@ -113,7 +115,7 @@ module "vpc" {
 }
 `;
 
-    readFileSyncMock.mockReturnValue(mainTfContent);
+    readFileMock.mockResolvedValue(mainTfContent);
 
     const ctx = createTestContext(
       {
@@ -149,7 +151,7 @@ module "local" {
 }
 `;
 
-    readFileSyncMock.mockReturnValue(mainTfContent);
+    readFileMock.mockResolvedValue(mainTfContent);
 
     const ctx = createTestContext(
       {
@@ -193,7 +195,7 @@ module "security" {
 }
 `;
 
-    readFileSyncMock.mockReturnValue(mainTfContent);
+    readFileMock.mockResolvedValue(mainTfContent);
 
     const ctx = createTestContext(
       {
@@ -251,9 +253,9 @@ module "security" {
     const mainTfContent = 'module "networking" { source = "../networking" }';
     const computeTfContent = 'module "compute" { source = "../compute" }';
 
-    readFileSyncMock
-      .mockReturnValueOnce(mainTfContent)
-      .mockReturnValueOnce(computeTfContent);
+    readFileMock
+      .mockResolvedValueOnce(mainTfContent)
+      .mockResolvedValueOnce(computeTfContent);
 
     const ctx = createTestContext(
       {
@@ -305,7 +307,7 @@ module "security" {
     const invalidTfPath = join(appProjectRoot, 'invalid.tf');
     const invalidContent = 'invalid hcl syntax {{{{';
 
-    readFileSyncMock.mockReturnValue(invalidContent);
+    readFileMock.mockResolvedValue(invalidContent);
 
     const ctx = createTestContext(
       {
@@ -335,9 +337,7 @@ module "security" {
     const appProjectRoot = 'packages/app';
     const mainTfPath = join(appProjectRoot, 'main.tf');
 
-    readFileSyncMock.mockImplementation(() => {
-      throw new Error('File not found');
-    });
+    readFileMock.mockRejectedValue(new Error('File not found'));
 
     const ctx = createTestContext(
       {
@@ -409,7 +409,7 @@ module "security" {
     const mainTfPath = join(appProjectRoot, 'main.tf');
     const mainTfContent = 'module "shared" { source = "../shared-module" }';
 
-    readFileSyncMock.mockReturnValue(mainTfContent);
+    readFileMock.mockResolvedValue(mainTfContent);
 
     const ctx = createTestContext(
       {
