@@ -1,3 +1,13 @@
+## 0.7.0 (2025-11-09)
+
+### 🚀 Features
+
+- improve Terraform file parsing with abstract parser architecture ([159a080](https://github.com/alexpialetski/nx-terraform/commit/159a080))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+
 ## 0.6.0 (2025-11-06)
 
 ### 🚀 Features
