@@ -22,6 +22,9 @@ describe('create-nx-terraform-app', () => {
   });
 
   test('end to end flow', () => {
+    // ============================================
+    // SECTION 1: Workspace Creation & Initial Setup
+    // ============================================
     projectDirectory = createTestProject('test-project', '--backendType=local');
 
     // npm ls will fail if the package is not installed properly
@@ -55,6 +58,9 @@ describe('create-nx-terraform-app', () => {
     const infraProjectPath = join(projectDirectory, 'packages/terraform-infra');
     expect(infraProject).toMatchSnapshot();
 
+    // ============================================
+    // SECTION 2: Create Shared Module (Stateless)
+    // ============================================
     // Generate stateless terraform module (library)
     execSync(
       'nx g nx-terraform:terraform-module shared-module --backendProject=""',
@@ -99,6 +105,9 @@ describe('create-nx-terraform-app', () => {
       readFileSync(join(__dirname, 'files/new_resource.tf'), 'utf-8')
     );
 
+    // ============================================
+    // SECTION 3: Create Standalone Module
+    // ============================================
     // Generate standalone terraform module (library) that uses its own backend
     execSync(
       'nx g nx-terraform:terraform-module terraform-standalone-infra --backendProject=""',
@@ -141,7 +150,27 @@ describe('create-nx-terraform-app', () => {
       readFileSync(join(__dirname, 'files/standalone_provider.tf'), 'utf-8')
     );
 
-    // Add module reference to shared-module
+    // Run sync to update metadata before first apply
+    resetNx(projectDirectory);
+
+    // ============================================
+    // SECTION 4: Apply Standalone Module (First Time)
+    // ============================================
+    // First terraform-apply: Apply terraform-standalone-infra WITHOUT module reference
+    execSync('nx run terraform-standalone-infra:terraform-apply', {
+      cwd: projectDirectory,
+      stdio: 'inherit',
+    });
+
+    // Verify first apply succeeded (state file exists)
+    expect(
+      existsSync(join(standaloneProjectPath, 'terraform.tfstate'))
+    ).toBeTruthy();
+
+    // ============================================
+    // SECTION 5: Add Module Reference to Standalone
+    // ============================================
+    // Now add module reference to shared-module
     writeFileSync(
       join(standaloneProjectPath, 'module_reference.tf'),
       readFileSync(
@@ -156,6 +185,19 @@ describe('create-nx-terraform-app', () => {
       readFileSync(join(__dirname, 'files/standalone_new_resource.tf'), 'utf-8')
     );
 
+    // Run sync again - this should update provider.tf metadata with the new module
+    resetNx(projectDirectory);
+
+    // Second terraform-apply: Apply terraform-standalone-infra WITH module reference
+    // This should trigger terraform-init again because provider.tf changed
+    execSync('nx run terraform-standalone-infra:terraform-apply', {
+      cwd: projectDirectory,
+      stdio: 'inherit',
+    });
+
+    // ============================================
+    // SECTION 6: Verify Dependencies
+    // ============================================
     // Verify dependency is detected in the project graph
     // First, trigger dependency calculation by resetting the cache
     resetNx(projectDirectory);
@@ -174,14 +216,14 @@ describe('create-nx-terraform-app', () => {
       'shared-module'
     );
 
+    // ============================================
+    // SECTION 7: Apply terraform-infra & Final Verification
+    // ============================================
     // Run sync generator to update project configurations
-    execSync('nx sync', {
-      cwd: projectDirectory,
-      stdio: 'inherit',
-    });
+    resetNx(projectDirectory);
 
-    // Run terraform-apply on both terraform-infra and terraform-standalone-infra
-    execSync('nx run-many -t terraform-apply', {
+    // Run terraform-apply on terraform-infra (terraform-standalone-infra was already applied above)
+    execSync('nx run terraform-infra:terraform-apply', {
       cwd: projectDirectory,
       stdio: 'inherit',
     });
@@ -207,6 +249,8 @@ describe('create-nx-terraform-app', () => {
     ).toBeTruthy();
 
     // Verify the local file resource was created successfully in terraform-standalone-infra using module output
+    // This file is created during the second terraform-apply (after module was added)
+    // If terraform-init was not invalidated, this would fail because the module wouldn't be available
     expect(
       readFileSync(join(standaloneProjectPath, 'test-output.txt'), 'utf-8')
     ).toBe('Hello from shared-module!');

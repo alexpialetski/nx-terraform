@@ -6,99 +6,110 @@ import {
 } from '@nx/devkit';
 import { join } from 'path';
 import type { SyncGeneratorResult } from 'nx/src/utils/sync-generators';
-import { hasBackendBlock, parseTerraformFile } from '../../utils/fileParser';
+import { BackendResource, ModuleResource } from '../../utils/TerraformFile';
+import { ProviderTerraformFile } from '../../utils/ProviderTerraformFile';
+import { TreeTerraformFileParser } from '../../utils/TreeTerraformFileParser';
 import { SyncTerraformMetadataGeneratorSchema } from './schema';
 import { PLUGIN_NAME } from '../../constants';
+
+/**
+ * Project state collected from Terraform files
+ */
+interface ProjectState {
+  backends: BackendResource[];
+  modules: ModuleResource[];
+  providerFile: ProviderTerraformFile | null;
+}
 
 export async function syncTerraformMetadataGenerator(
   tree: Tree,
   _: SyncTerraformMetadataGeneratorSchema
 ): Promise<SyncGeneratorResult> {
   const projects = getProjects(tree);
-  const updatedProjects: string[] = [];
+  const updatedProjects = new Set<string>();
 
   for (const [projectName, project] of projects) {
     try {
       const projectRoot = project.root;
       // Read current project configuration first to check if this is a Terraform project
       const projectConfig = readProjectConfiguration(tree, projectName);
-      const currentTerraformProjectType =
-        projectConfig.metadata?.[PLUGIN_NAME]?.projectType;
+      const nxTerraformProjectMetadata = projectConfig.metadata?.[PLUGIN_NAME];
 
       // Only process projects that have projectType set (indicating they are Terraform projects)
-      // This ensures we only manage projects that are explicitly Terraform projects
-      if (!currentTerraformProjectType) {
+      if (!nxTerraformProjectMetadata) {
         continue;
       }
 
-      // Only process 'module' or 'stateful' types (these can be synced based on .tf files)
-      if (
-        currentTerraformProjectType !== 'module' &&
-        currentTerraformProjectType !== 'stateful'
-      ) {
-        continue;
+      // Initialize project state
+      const projectState: ProjectState = {
+        backends: [],
+        modules: [],
+        providerFile: null,
+      };
+
+      // Use TreeTerraformFileParser to parse all .tf files
+      const parser = new TreeTerraformFileParser(tree, projectRoot);
+
+      for await (const terraformFile of parser) {
+        // Extract backend blocks (overwrite on each iteration to match original behavior)
+        projectState.backends.push(...terraformFile.extractBackends());
+
+        // Collect modules from all files
+        projectState.modules.push(...terraformFile.extractModules());
+
+        // Store ProviderTerraformFile reference for provider.tf files
+        if (terraformFile instanceof ProviderTerraformFile) {
+          projectState.providerFile = terraformFile;
+        }
       }
 
-      const tfFiles = tree
-        .children(projectRoot)
-        .filter((file) => file.endsWith('.tf'));
-
-      // Check if project has .tf files
-      if (tfFiles.length === 0) {
-        // No .tf files, skip
-        continue;
-      }
+      // Determine hasBackend from collected backends
+      const hasBackend = projectState.backends.length > 0;
 
       const currentBackendProject =
         projectConfig.metadata?.[PLUGIN_NAME]?.backendProject;
 
-      // If backendProject is set, the type should be 'module' (stateful module)
-      // Don't change it - backendProject takes precedence
-      if (currentBackendProject) {
-        continue;
-      }
-
-      // Scan .tf files for backend blocks to determine if type should be updated
-      let hasBackend = false;
-      for (const tfFile of tfFiles) {
-        const filePath = join(projectRoot, tfFile);
-
-        // Read file content from Tree
-        const fileContent = tree.read(filePath, 'utf-8');
-        if (!fileContent) {
-          continue;
-        }
-
-        const { parsed, success: parseSuccess } = await parseTerraformFile(
-          tfFile,
-          fileContent
-        );
-        if (!parseSuccess) {
-          continue;
-        }
-
-        if (hasBackendBlock(parsed)) {
-          hasBackend = true;
-          break;
-        }
-      }
-
-      // Determine the correct type based on backend blocks
-      const expectedTerraformProjectType = hasBackend ? 'stateful' : 'module';
-
-      // Only update if the current type doesn't match what we detected
-      if (currentTerraformProjectType !== expectedTerraformProjectType) {
-        updateProjectConfiguration(tree, projectName, {
-          ...projectConfig,
-          metadata: {
-            ...projectConfig.metadata,
-            [PLUGIN_NAME]: {
-              ...projectConfig.metadata?.[PLUGIN_NAME],
-              projectType: expectedTerraformProjectType,
+      // Determine updates needed based on collected state
+      // Only update project type if:
+      // 1. Project type is 'module' or 'stateful' (not 'backend')
+      // 2. No backendProject is set (backendProject takes precedence)
+      if (
+        !currentBackendProject &&
+        (nxTerraformProjectMetadata.projectType === 'module' ||
+          nxTerraformProjectMetadata.projectType === 'stateful')
+      ) {
+        const expectedTerraformProjectType = hasBackend ? 'stateful' : 'module';
+        if (
+          nxTerraformProjectMetadata.projectType !==
+          expectedTerraformProjectType
+        ) {
+          updateProjectConfiguration(tree, projectName, {
+            ...projectConfig,
+            metadata: {
+              ...projectConfig.metadata,
+              [PLUGIN_NAME]: {
+                ...projectConfig.metadata?.[PLUGIN_NAME],
+                projectType: expectedTerraformProjectType,
+              },
             },
-          },
-        });
-        updatedProjects.push(projectName);
+          });
+          updatedProjects.add(projectName);
+        }
+      }
+
+      // Update provider.tf file if it exists
+      if (projectState.providerFile) {
+        // Set modules on provider file (will be made unique by source inside)
+        projectState.providerFile.setModules(projectState.modules);
+
+        const providerTfPath = join(projectRoot, 'provider.tf');
+        const { content, changed } =
+          projectState.providerFile.updateMetadataComment();
+
+        if (changed) {
+          tree.write(providerTfPath, content);
+          updatedProjects.add(projectName);
+        }
       }
     } catch {
       // Skip projects that can't be processed, continue with next project
@@ -108,9 +119,9 @@ export async function syncTerraformMetadataGenerator(
 
   // Everything is in sync, return void
   return {
-    outOfSyncMessage: `The terraform projects configurations for ${updatedProjects.join(
-      ', '
-    )} need to be updated.`,
+    outOfSyncMessage: `The terraform projects configurations for ${Array.from(
+      updatedProjects
+    ).join(', ')} need to be updated.`,
   };
 }
 

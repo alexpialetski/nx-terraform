@@ -1,3 +1,7 @@
+# nx-terraform-metadata-start
+# providers: local
+# nx-terraform-metadata-end
+
 terraform {
   required_providers {
     local = {

@@ -42,3 +42,7 @@ export function validateAndAddDependency(
     );
   }
 }
+
+export function isLocalPath(sourcePath: string): boolean {
+  return sourcePath.startsWith('./') || sourcePath.startsWith('../');
+}

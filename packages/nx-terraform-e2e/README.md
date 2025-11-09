@@ -34,21 +34,26 @@ Tests the end-to-end flow of creating a new Nx workspace using the `create-nx-te
 **What it tests:**
 
 1. **Workspace Creation**
+
    - Creates a test workspace using `create-nx-terraform-app`
    - Validates the workspace structure is created correctly
 
 2. **Plugin Installation**
+
    - Verifies `nx-terraform` package is installed correctly
    - Checks plugin is registered in `nx.json`
 
-3. **Backend Project Validation**
+3. **Backend Project Validation** (when `backendType` is provided)
+
    - Verifies `terraform-setup` backend project exists
    - Validates project configuration matches expected structure
    - Uses snapshot testing to ensure consistency
 
 4. **Terraform Module Validation**
-   - Verifies `terraform-infra` stateful module is created
-   - Validates it's connected to `terraform-setup` backend
+
+   - Verifies `terraform-infra` module is created
+   - When `backendType` is provided: Validates it's a stateful module connected to `terraform-setup` backend
+   - When `backendType` is not provided: Validates it's a simple module without backend connection
    - Checks project type is `application`
 
 5. **Terraform Target Execution**
@@ -78,9 +83,10 @@ nx run nx-terraform-e2e:e2e
 
 ### Run with Specific Backend Type
 
-The tests create a workspace with the `--backendType` option. Currently tested:
+The tests create a workspace with the optional `--backendType` option. Currently tested:
 
-- `local` - Local backend with state files
+- `local` - Local backend with state files (creates backend + stateful module)
+- No `backendType` - Creates simple module only (no backend project)
 
 ### Update Snapshots
 
@@ -174,6 +180,7 @@ Each test run:
 ### Tests Fail with "Cannot find module"
 
 Ensure dependencies are built:
+
 ```bash
 nx run nx-terraform:build
 nx run create-nx-terraform-app:build
@@ -182,6 +189,7 @@ nx run create-nx-terraform-app:build
 ### Snapshot Mismatches
 
 If snapshots don't match:
+
 1. Verify the changes are intentional
 2. Run with `--updateSnapshot` to update
 3. Review diff to ensure correctness
@@ -189,9 +197,9 @@ If snapshots don't match:
 ### Test Timeout
 
 E2E tests may take longer because they:
+
 - Create real workspaces
 - Execute Terraform commands
 - Perform file system operations
 
 Increase timeout if needed in `jest.config.ts`.
-

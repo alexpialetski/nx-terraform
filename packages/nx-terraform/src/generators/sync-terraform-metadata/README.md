@@ -27,6 +27,10 @@ The generator:
    - Sets `metadata['nx-terraform'].projectType: 'stateful'` when backend blocks are detected
    - Sets `metadata['nx-terraform'].projectType: 'module'` when no backend blocks are found
    - Only updates when the current type doesn't match the detected state (preserves explicit user intent)
+5. **Updates provider.tf files** (if present):
+   - Detects module references from all `.tf` files in the project
+   - Updates the metadata comment in `provider.tf` with the list of referenced modules
+   - Ensures the metadata comment reflects the current module dependencies
 
 ## Metadata Preservation
 
@@ -39,6 +43,7 @@ This ensures that user intent is always preserved, and the generator only fills 
 
 ## When to Use
 
+- **Automatically** when running `terraform-init` target - The generator is automatically invoked before initialization to ensure metadata is up to date
 - **After manually creating Terraform projects** - Projects must have `metadata['nx-terraform'].projectType` set to 'module' or 'stateful' first
 - **After modifying `.tf` files** to add or remove backend blocks
 - **As part of CI/CD** to ensure metadata is always up to date
@@ -76,7 +81,7 @@ To automatically run this generator with `nx sync`, add it to your `nx.json`:
 }
 ```
 
-The `init` generator can optionally set this up automatically.
+The `init` generator can optionally set this up automatically. Additionally, the `terraform-init` target automatically runs this generator before initialization to ensure project metadata is synchronized.
 
 ## Implementation Details
 
@@ -85,7 +90,9 @@ The `init` generator can optionally set this up automatically.
 - `getProjects(tree)`: Gets all projects in the workspace
 - `readProjectConfiguration(tree, projectName)`: Reads current project configuration
 - `updateProjectConfiguration(tree, projectName, config)`: Updates project configuration
-- `hasBackendBlock(parsed)`: Detects backend blocks in parsed HCL
+- `TreeTerraformFileParser`: Parses all `.tf` files in a project
+- `ProviderTerraformFile`: Manages provider.tf file metadata comments
+- Extracts backend blocks and module references from parsed Terraform files
 
 **Behavior:**
 

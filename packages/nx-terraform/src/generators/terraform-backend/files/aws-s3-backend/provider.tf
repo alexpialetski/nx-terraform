@@ -1,3 +1,7 @@
+# nx-terraform-metadata-start
+# providers: aws,external,local
+# nx-terraform-metadata-end
+
 terraform {
   required_providers {
     aws = {

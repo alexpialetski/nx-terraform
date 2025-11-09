@@ -83,7 +83,11 @@ export const cleanupTestProject = (projectDirectory: string) => {
  * @param projectDirectory - Directory of the workspace to reset
  */
 export function resetNx(projectDirectory: string) {
-  execSync('nx reset', {
+  execSync('nx reset --onlyDaemon', {
+    cwd: projectDirectory,
+    stdio: 'inherit',
+  });
+  execSync('nx sync', {
     cwd: projectDirectory,
     stdio: 'inherit',
   });

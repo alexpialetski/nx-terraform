@@ -33,6 +33,7 @@ nx add nx-terraform
 ```
 
 This will:
+
 - Add `nx-terraform` as a dependency
 - Register the plugin in `nx.json`
 - Enable automatic Terraform project discovery
@@ -40,21 +41,25 @@ This will:
 ## Quick Start
 
 1. **Initialize the plugin** (if not using `create-nx-terraform-app`):
+
    ```bash
    nx g nx-terraform:init
    ```
 
 2. **Create a Terraform backend project**:
+
    ```bash
    nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
    ```
 
 3. **Apply the backend** (to create the state storage infrastructure):
+
    ```bash
    nx run my-backend:terraform-apply
    ```
 
 4. **Create a Terraform module**:
+
    ```bash
    nx g nx-terraform:terraform-module my-infra \
      --backendProject=my-backend
@@ -94,11 +99,13 @@ The plugin automatically creates these targets for each Terraform project:
 The plugin supports three types of Terraform projects:
 
 1. **Backend Projects** (`application` without `backendProject` metadata):
+
    - Manage remote state infrastructure (e.g., S3 bucket, DynamoDB table)
    - Generate `backend.config` files
    - Full target set with caching enabled
 
 2. **Stateful Projects** (`application` with `backendProject` metadata):
+
    - Infrastructure projects that use remote state
    - Reference backend project via `metadata['nx-terraform'].backendProject`
    - Full target set (no caching for init/plan due to state)
@@ -121,12 +128,14 @@ The plugin automatically detects and creates dependencies in two ways:
 2. **Module Reference Dependencies**: The plugin analyzes `.tf` files to detect module references using local paths (e.g., `source = "../../packages/networking"`). When a module block references another Terraform project, a dependency is automatically created.
 
 **How Module Detection Works:**
+
 - Scans `.tf` files for `module` blocks
 - Extracts `source` attributes that use local paths (`./` or `../`)
 - Matches the last path segment to project names in the workspace
 - Creates static dependencies from the referencing project to the referenced project
 
 **Example:**
+
 ```hcl
 # In packages/web-app/main.tf
 module "networking" {
@@ -175,6 +184,7 @@ nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
 ```
 
 **Options**:
+
 - `name`: Backend project name (required)
 - `backendType`: 'aws-s3' or 'local' (required)
 - `bucketNamePrefix`: Prefix for S3 bucket name (optional, AWS S3 only)
@@ -195,6 +205,7 @@ nx g nx-terraform:terraform-module my-infra \
 ```
 
 **Options**:
+
 - `name`: Module name (required)
 - `backendProject`: Backend project name (optional, creates stateful module if provided). The backend type is automatically derived from the backend project's metadata.
 
@@ -205,8 +216,17 @@ nx g nx-terraform:terraform-module my-infra \
 Initializes workspace with Terraform setup (used by `create-nx-terraform-app`).
 
 ```bash
+# With backend (creates backend + stateful module)
 nx g nx-terraform:preset --projectName=terraform-setup --backendType=aws-s3
+
+# Without backend (creates simple module only)
+nx g nx-terraform:preset --projectName=terraform-setup
 ```
+
+**Options**:
+
+- `projectName`: Workspace name (required)
+- `backendType`: 'aws-s3' or 'local' (optional, if not provided only creates simple module)
 
 **Documentation**: [`packages/nx-terraform/src/generators/preset/README.md`](./src/generators/preset/README.md)
 
@@ -218,7 +238,7 @@ Automatically syncs Terraform project metadata based on `.tf` file analysis.
 nx g nx-terraform:sync-terraform-metadata
 ```
 
-This generator scans all Terraform projects and updates `projectType` metadata based on the presence of backend blocks in `.tf` files. It's designed to be run as a global sync generator.
+This generator scans all Terraform projects and updates `projectType` metadata based on the presence of backend blocks in `.tf` files. It also updates `provider.tf` files with module dependency metadata. It's designed to be run as a global sync generator.
 
 **Documentation**: [`packages/nx-terraform/src/generators/sync-terraform-metadata/README.md`](./src/generators/sync-terraform-metadata/README.md)
 
@@ -235,6 +255,8 @@ nx run my-project:terraform-init
 ```
 
 **Dependencies**: `^terraform-apply` (backend must be applied first)
+
+**Sync Generators**: Automatically runs `sync-terraform-metadata` generator before initialization to ensure project metadata is up to date
 
 ### terraform-plan
 
@@ -352,6 +374,7 @@ nx g nx-terraform:terraform-backend my-backend --backendType=aws-s3
 ```
 
 **Features**:
+
 - Versioning enabled
 - Object lock for state protection
 - Dynamic bucket naming
@@ -366,6 +389,7 @@ nx g nx-terraform:terraform-backend my-backend --backendType=local
 ```
 
 **Use Cases**:
+
 - Development and testing
 - Single-user scenarios
 - Ephemeral environments
@@ -441,6 +465,7 @@ nx g nx-terraform:terraform-module web-app \
 ```
 
 Then reference the module in your Terraform code:
+
 ```hcl
 # In packages/web-app/main.tf
 module "networking" {
@@ -493,6 +518,7 @@ Caching behavior varies by project type:
 - All other targets are stubs (cached but no-op)
 
 Cache inputs include:
+
 - All `.tf` and `.tfvars` files
 - Relevant environment variables
 - Terraform version
@@ -509,6 +535,7 @@ Cache inputs include:
 Comprehensive documentation is available for each component:
 
 - **Generators**:
+
   - [`init`](./src/generators/init/README.md) - Plugin initialization
   - [`terraform-backend`](./src/generators/terraform-backend/README.md) - Backend project creation
   - [`terraform-module`](./src/generators/terraform-module/README.md) - Module creation
