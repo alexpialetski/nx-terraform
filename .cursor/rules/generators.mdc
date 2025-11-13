@@ -8,19 +8,19 @@ alwaysApply: false
 
 # Generators
 
-The plugin provides four generators:
+The plugin provides five generators:
 
 ## Generator List
 
 1. **`init` Generator** - `packages/nx-terraform/src/generators/init/`
    - Adds the `nx-terraform` plugin to `nx.json`
-   - Run via: `nx g @nx-terraform/plugin:init`
+   - Run via: `nx g nx-terraform:init`
    - Documentation: `packages/nx-terraform/src/generators/init/README.md`
 
 2. **`terraform-backend` Generator** - `packages/nx-terraform/src/generators/terraform-backend/`
    - Creates a new Terraform backend project
    - Supports backend types: `aws-s3` or `local`
-   - Run via: `nx g @nx-terraform/plugin:terraform-backend`
+   - Run via: `nx g nx-terraform:terraform-backend`
    - Documentation: `packages/nx-terraform/src/generators/terraform-backend/README.md`
 
 3. **`preset` Generator** - `packages/nx-terraform/src/generators/preset/`
@@ -32,8 +32,16 @@ The plugin provides four generators:
 4. **`terraform-module` Generator** - `packages/nx-terraform/src/generators/terraform-module/`
    - Creates Terraform modules (simple library or stateful application)
    - Supports backend integration for stateful modules
-   - Run via: `nx g @nx-terraform/plugin:terraform-module`
+   - Run via: `nx g nx-terraform:terraform-module`
    - Documentation: `packages/nx-terraform/src/generators/terraform-module/README.md`
+
+5. **`sync-terraform-metadata` Generator** - `packages/nx-terraform/src/generators/sync-terraform-metadata/`
+   - Automatically syncs Terraform project metadata based on `.tf` file analysis
+   - Global sync generator (runs with `nx sync`)
+   - Automatically invoked before `terraform-init` target execution
+   - Updates `metadata[PLUGIN_NAME].projectType` based on backend block detection
+   - Run via: `nx g nx-terraform:sync-terraform-metadata` or `nx sync`
+   - Documentation: `packages/nx-terraform/src/generators/sync-terraform-metadata/README.md`
 
 ## Generator Development Rules
 
@@ -45,14 +53,13 @@ When adding or modifying generators:
 4. Implement generator function with both default export and named export
 5. Add to `generators.json`
 6. Write tests (`*.spec.ts`) using Nx's testing utilities
-7. Use `Tree` API for all file operations (don't use fs directly)
-8. Always call `formatFiles()` after generating files
-9. Template files with EJS should use `__tmpl__` suffix to avoid lint errors
-10. Update generator README.md with any significant changes
+7. **For Tree API, formatFiles, and other Nx Devkit utilities, see `nx-devkit-utilities.mdc`**
+8. Template files with EJS should use `__tmpl__` suffix to avoid lint errors
+9. Update generator README.md with any significant changes
 
 ## Generator Template System
 
-- Uses `generateFiles` from `@nx/devkit`
+- Uses `generateFiles` from `@nx/devkit` (see `nx-devkit-utilities.mdc` for details)
 - Template directories: `files/` subdirectory in each generator
 - EJS templates with variable substitution: `<%= variable %>`
 - Template files use `__tmpl__` suffix (stripped via `tmpl: ''` substitution)

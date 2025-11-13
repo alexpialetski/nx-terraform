@@ -72,7 +72,7 @@ const normalizeOptions = (
 ## Testing Style
 
 - Test file: `*.spec.ts` alongside source file
-- Use `createTreeWithEmptyWorkspace()` for test setup
+- **For testing utilities (createTreeWithEmptyWorkspace, etc.), see `nx-devkit-utilities.mdc`**
 - Test both success and error cases
 - Test normalization logic separately
 - Verify generated files and project configuration
@@ -85,3 +85,18 @@ const normalizeOptions = (
 - **Test files**: Use camelCase matching the source file name (e.g., `createDependencies.spec.ts`, `fileParser.spec.ts`)
 - **Templates**: `files/` directory with descriptive names
 - **Shared types**: Place in `types.ts` at the root of the `src/` folder
+
+## Constants and Metadata Access
+
+- **Plugin Name**: Always use `PLUGIN_NAME` constant from `constants.ts` instead of hardcoded strings
+  ```typescript
+  import { PLUGIN_NAME } from '../../constants'; // or '../constants' depending on depth
+  ```
+- **Metadata Access Pattern**: Always use `PLUGIN_NAME` constant when accessing metadata:
+  ```typescript
+  const metadata = projectConfig.metadata?.[PLUGIN_NAME];
+  const projectType = projectConfig.metadata?.[PLUGIN_NAME]?.projectType;
+  const backendProject = projectConfig.metadata?.[PLUGIN_NAME]?.backendProject;
+  ```
+- **Never use hardcoded strings**: Avoid `metadata['nx-terraform']` - always use `metadata[PLUGIN_NAME]`
+- **Constants Location**: `packages/nx-terraform/src/constants.ts` exports `PLUGIN_NAME = 'nx-terraform'`

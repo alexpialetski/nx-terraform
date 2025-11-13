@@ -21,9 +21,8 @@ alwaysApply: false
 - Uses `@nx/devkit` for plugin APIs
 - Follows Nx plugin structure conventions
 - Generators export default function and named export
-- Uses `Tree` API for all file operations (don't use fs directly in generators)
-- Always use `formatFiles()` after generating files
 - Schema files use JSON Schema (Draft 07)
+- **For Nx Devkit utilities (Tree API, formatFiles, generateFiles, etc.), see `nx-devkit-utilities.mdc`**
 
 ## File Operations
 
@@ -31,6 +30,7 @@ alwaysApply: false
 - **Format files**: Always call `formatFiles(tree)` after file generation
 - **Template files**: Use `__tmpl__` suffix for files with EJS syntax to avoid lint errors
 - **Template substitution**: `__ignoreFile__` → `.gitignore` via `ignoreFile: '.gitignore'`
+- **For detailed Tree API usage and file operations, see `nx-devkit-utilities.mdc`**
 
 ## Testing
 
@@ -38,7 +38,7 @@ alwaysApply: false
 - Tests located alongside source files (`*.spec.ts`)
 - E2E tests in `packages/nx-terraform-e2e`
 - Test generators with Nx's testing utilities
-- Use `createTreeWithEmptyWorkspace` for generator tests
+- **For testing utilities (createTreeWithEmptyWorkspace, etc.), see `nx-devkit-utilities.mdc`**
 
 ## Code Organization
 

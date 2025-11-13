@@ -55,7 +55,8 @@ The plugin supports two backend types: `aws-s3` and `local`
 - Located at `packages/{backend-name}/backend.config`
 
 ### Stateful Projects
-- Reference backend via `metadata.backendProject` in `project.json`
+- Reference backend via `metadata[PLUGIN_NAME].backendProject` in `project.json` (where `PLUGIN_NAME = 'nx-terraform'`)
+- Backend type is automatically derived from backend project's `metadata[PLUGIN_NAME].backendType`
 - Use `backend.config` from referenced backend during `terraform-init`
 - Command: `terraform init -backend-config=../{backendProject}/backend.config -reconfigure`
 
@@ -74,3 +75,10 @@ The plugin supports two backend types: `aws-s3` and `local`
 
 - Preset generator hardcodes backend project name as `'terraform-setup'`
 - User-created backends can have any valid project name
+
+## Backend Type Storage
+
+- Backend type is stored in `metadata[PLUGIN_NAME].backendType` (where `PLUGIN_NAME = 'nx-terraform'`)
+- Backend projects have `metadata[PLUGIN_NAME].backendType: 'aws-s3'` or `'local'`
+- Stateful modules automatically derive `backendType` from their referenced backend project's metadata
+- The `terraform-module` generator validates backend project exists and retrieves `backendType` from metadata
