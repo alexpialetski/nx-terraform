@@ -1,5 +1,5 @@
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
-import { readNxJson } from '@nx/devkit';
+import { readJson, readNxJson } from '@nx/devkit';
 
 import { initGenerator } from './init';
 import { InitGeneratorSchema } from './schema';
@@ -20,5 +20,15 @@ describe('init generator', () => {
         },
       ])
     );
+  });
+
+  it('should add @cdktf/hcl2json as dev dependency', async () => {
+    const tree = createTreeWithEmptyWorkspace(options);
+
+    await initGenerator(tree);
+
+    const packageJson = readJson(tree, 'package.json');
+    expect(packageJson.devDependencies).toBeDefined();
+    expect(packageJson.devDependencies['@cdktf/hcl2json']).toBe('^0.21.0');
   });
 });
