@@ -13,6 +13,8 @@ alwaysApply: false
 The plugin automatically creates these targets for discovered Terraform projects:
 
 - **terraform-init**: Initialize Terraform workspace
+  - Automatically runs `sync-terraform-metadata` generator before initialization via `syncGenerators` field
+  - `syncGenerators: ['nx-terraform:sync-terraform-metadata']`
 - **terraform-plan**: Create execution plan
 - **terraform-apply**: Apply changes
 - **terraform-destroy**: Destroy infrastructure
@@ -22,13 +24,15 @@ The plugin automatically creates these targets for discovered Terraform projects
 
 ## Target Configuration by Project Type
 
-### Backend Projects (`application` without `backendProject` metadata)
+### Backend Projects (`application` with `metadata[PLUGIN_NAME].projectType: 'backend'`)
 - Full target set with caching enabled
+- No `metadata[PLUGIN_NAME].backendProject`
 
-### Stateful Projects (`application` with `backendProject` metadata)
+### Stateful Projects (`application` with `metadata[PLUGIN_NAME].backendProject` set)
 - Full target set (no caching for init/plan due to state)
+- Has `metadata[PLUGIN_NAME].backendProject` pointing to backend project
 
-### Module Projects (`library`)
+### Module Projects (`application` with `metadata[PLUGIN_NAME].projectType: 'module'`)
 - Stub targets that echo messages (modules don't have state)
 
 ## Target Dependencies

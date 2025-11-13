@@ -1,0 +1,717 @@
+---
+description: Common Nx Devkit utilities for plugin development - Tree API, project configuration, file operations, plugin APIs, and testing patterns
+globs:
+  - "**/*.ts"
+  - "**/generators/**"
+  - "**/targets/**"
+  - "**/dependencies/**"
+alwaysApply: false
+---
+
+# Nx Devkit Utilities Reference
+
+Common utilities from `@nx/devkit` for Nx plugin development. Reference: [Nx Devkit Documentation](https://nx.dev/docs/reference/devkit)
+
+**Version**: Nx v22.0.2
+
+## Core Types and Interfaces
+
+### Tree
+Virtual file system for generators. All file operations in generators must use Tree, never `fs` directly.
+
+```typescript
+import { Tree } from '@nx/devkit';
+
+export async function generator(tree: Tree, options: Schema) {
+  // Use tree for all file operations
+}
+```
+
+### ProjectConfiguration
+Structure for project configuration in `project.json`.
+
+```typescript
+import { ProjectConfiguration } from '@nx/devkit';
+
+const config: ProjectConfiguration = {
+  root: 'packages/my-project',
+  projectType: 'application',
+  sourceRoot: 'packages/my-project',
+  targets: {},
+  metadata: {
+    'nx-terraform': {
+      projectType: 'backend',
+    },
+  },
+};
+```
+
+### TargetConfiguration
+Structure for target definitions in project configuration.
+
+```typescript
+import { TargetConfiguration } from '@nx/devkit';
+
+const target: TargetConfiguration = {
+  executor: 'nx:run-commands',
+  options: {
+    cwd: '{projectRoot}',
+    command: 'terraform init',
+  },
+  dependsOn: ['^terraform-apply'],
+  cache: false,
+};
+```
+
+### Plugin API Types
+
+- **`CreateNodesV2`**: For project discovery (inferred tasks)
+- **`CreateDependencies`**: For dependency management
+- **`CreateNodesContextV2`**: Context provided to CreateNodesV2
+- **`CreateDependenciesContext`**: Context provided to CreateDependencies
+- **`RawProjectGraphDependency`**: Dependency structure for graph
+
+## Tree API (File Operations)
+
+**Always use Tree API in generators, never `fs` directly.**
+
+### Reading Files
+
+```typescript
+// Read file contents as string
+const content = tree.read('path/to/file.txt', 'utf-8');
+
+// Check if file exists
+if (tree.exists('path/to/file.txt')) {
+  // File exists
+}
+
+// Check if path is a file
+if (tree.isFile('path/to/file.txt')) {
+  // Is a file
+}
+```
+
+### Writing Files
+
+```typescript
+// Write file contents
+tree.write('path/to/file.txt', 'content');
+
+// Write JSON file (use writeJson utility instead)
+```
+
+### Directory Operations
+
+```typescript
+// List directory contents
+const children = tree.children('path/to/directory');
+
+// Check if path exists
+if (tree.exists('path/to/directory')) {
+  // Path exists
+}
+```
+
+### Change Tracking
+
+```typescript
+// Get list of changes made to tree
+const changes = tree.listChanges();
+// Returns array of FileChange objects
+```
+
+## Project Configuration Utilities
+
+### Adding Project Configuration
+
+```typescript
+import { addProjectConfiguration, Tree } from '@nx/devkit';
+
+addProjectConfiguration(tree, 'my-project', {
+  root: 'packages/my-project',
+  projectType: 'application',
+  targets: {},
+});
+```
+
+**Example from codebase** (`terraform-backend.ts`):
+```typescript
+addProjectConfiguration(tree, normalizedOptions.name, {
+  root: projectRoot,
+  projectType: 'application',
+  sourceRoot: `${projectRoot}`,
+  targets: {},
+  metadata: {
+    [PLUGIN_NAME]: {
+      projectType: 'backend',
+      backendType: normalizedOptions.backendType,
+    },
+  },
+});
+```
+
+### Reading Project Configuration
+
+```typescript
+import { readProjectConfiguration, Tree } from '@nx/devkit';
+
+const config = readProjectConfiguration(tree, 'my-project');
+const projectType = config.projectType;
+const metadata = config.metadata?.[PLUGIN_NAME];
+```
+
+**Example from codebase** (`terraform-module/utils.ts`):
+```typescript
+const backendConfig = readProjectConfiguration(tree, backendProject);
+const backendType = backendConfig.metadata?.[PLUGIN_NAME]?.backendType;
+```
+
+### Updating Project Configuration
+
+```typescript
+import { updateProjectConfiguration, Tree } from '@nx/devkit';
+
+const config = readProjectConfiguration(tree, 'my-project');
+updateProjectConfiguration(tree, 'my-project', {
+  ...config,
+  metadata: {
+    ...config.metadata,
+    'nx-terraform': {
+      projectType: 'stateful',
+    },
+  },
+});
+```
+
+**Example from codebase** (`sync-terraform-metadata.ts`):
+```typescript
+updateProjectConfiguration(tree, projectName, {
+  ...projectConfig,
+  metadata: {
+    ...projectConfig.metadata,
+    [PLUGIN_NAME]: {
+      ...projectConfig.metadata?.[PLUGIN_NAME],
+      projectType: expectedTerraformProjectType,
+    },
+  },
+});
+```
+
+### Getting All Projects
+
+```typescript
+import { getProjects, Tree } from '@nx/devkit';
+
+const projects = getProjects(tree);
+// Returns Map<string, ProjectConfiguration>
+
+for (const [projectName, project] of projects) {
+  // Iterate over all projects
+}
+```
+
+**Example from codebase** (`sync-terraform-metadata.ts`):
+```typescript
+const projects = getProjects(tree);
+for (const [projectName, project] of projects) {
+  const projectConfig = readProjectConfiguration(tree, projectName);
+  // Process each project
+}
+```
+
+### Removing Project Configuration
+
+```typescript
+import { removeProjectConfiguration, Tree } from '@nx/devkit';
+
+removeProjectConfiguration(tree, 'my-project');
+```
+
+## Workspace Configuration Utilities
+
+### Reading nx.json
+
+```typescript
+import { readNxJson, Tree } from '@nx/devkit';
+
+const nxJson = readNxJson(tree);
+const plugins = nxJson?.plugins || [];
+```
+
+**Example from codebase** (`init.ts`):
+```typescript
+const nxJson = readNxJson(tree) || {};
+const hasPlugin = nxJson.plugins?.some((p) =>
+  typeof p === 'string' ? p === PLUGIN_NAME : p.plugin === PLUGIN_NAME
+);
+```
+
+### Updating nx.json
+
+```typescript
+import { updateNxJson, Tree } from '@nx/devkit';
+
+const nxJson = readNxJson(tree) || {};
+nxJson.plugins = [
+  ...(nxJson.plugins || []),
+  {
+    plugin: 'nx-terraform',
+    options: {},
+  },
+];
+updateNxJson(tree, nxJson);
+```
+
+**Example from codebase** (`init.ts`):
+```typescript
+if (!hasPlugin) {
+  if (!nxJson.plugins) {
+    nxJson.plugins = [];
+  }
+  nxJson.plugins = [
+    ...nxJson.plugins,
+    {
+      plugin: PLUGIN_NAME,
+      options: {},
+    },
+  ];
+}
+updateNxJson(tree, nxJson);
+```
+
+## File Generation Utilities
+
+### generateFiles
+
+Generate files from EJS templates. Used extensively in generators.
+
+```typescript
+import { generateFiles, Tree } from '@nx/devkit';
+import * as path from 'path';
+
+const templateDir = path.join(__dirname, 'files', 'template-name');
+generateFiles(tree, templateDir, projectRoot, {
+  // Template variables for EJS substitution
+  name: 'my-project',
+  backendType: 'aws-s3',
+  ignoreFile: '.gitignore',
+  tmpl: '', // Required to strip __tmpl__ suffix
+});
+```
+
+**Example from codebase** (`terraform-backend.ts`):
+```typescript
+const templateDir = path.join(
+  __dirname,
+  'files',
+  normalizedOptions.backendType === 'aws-s3'
+    ? 'aws-s3-backend'
+    : 'local-backend'
+);
+generateFiles(tree, templateDir, projectRoot, normalizedOptions);
+```
+
+**Template Patterns**:
+- Files with `__tmpl__` suffix are automatically renamed (e.g., `main.tf__tmpl__` → `main.tf`)
+- Use `<%= variable %>` for variable substitution
+- Use `<% if (condition) { %> ... <% } %>` for conditionals
+- `__ignoreFile__` template generates `.gitignore` via `ignoreFile: '.gitignore'` substitution
+
+### formatFiles
+
+Format generated files using Prettier. **Always call after generating files.**
+
+```typescript
+import { formatFiles, Tree } from '@nx/devkit';
+
+await formatFiles(tree);
+```
+
+**Example from codebase** (all generators):
+```typescript
+generateFiles(tree, templateDir, projectRoot, normalizedOptions);
+await formatFiles(tree);
+```
+
+## JSON Utilities
+
+### Reading JSON Files
+
+```typescript
+import { readJson, Tree } from '@nx/devkit';
+
+const json = readJson(tree, 'path/to/file.json');
+```
+
+### Writing JSON Files
+
+```typescript
+import { writeJson, Tree } from '@nx/devkit';
+
+writeJson(tree, 'path/to/file.json', {
+  key: 'value',
+});
+```
+
+### Updating JSON Files
+
+```typescript
+import { updateJson, Tree } from '@nx/devkit';
+
+updateJson(tree, 'path/to/file.json', (json) => {
+  json.newKey = 'newValue';
+  return json;
+});
+```
+
+### Parsing JSON
+
+```typescript
+import { parseJson, serializeJson } from '@nx/devkit';
+
+const obj = parseJson('{"key": "value"}');
+const jsonString = serializeJson({ key: 'value' });
+```
+
+## Path Utilities
+
+### joinPathFragments
+
+Cross-platform path joining. Prefer over `path.join()` for consistency.
+
+```typescript
+import { joinPathFragments } from '@nx/devkit';
+
+const fullPath = joinPathFragments('packages', 'my-project', 'file.txt');
+```
+
+### normalizePath
+
+Normalize path separators (useful for cross-platform compatibility).
+
+```typescript
+import { normalizePath } from '@nx/devkit';
+
+const normalized = normalizePath('packages\\my-project\\file.txt');
+// Returns: 'packages/my-project/file.txt'
+```
+
+### offsetFromRoot
+
+Get relative path from workspace root.
+
+```typescript
+import { offsetFromRoot } from '@nx/devkit';
+
+const offset = offsetFromRoot('packages/my-project');
+// Returns: '../../' (if project is in packages/)
+```
+
+## Logging Utilities
+
+### logger
+
+Logger instance for console output with formatting.
+
+```typescript
+import { logger } from '@nx/devkit';
+
+logger.info('Information message');
+logger.warn('Warning message');
+logger.error('Error message');
+logger.debug('Debug message');
+```
+
+**Example from codebase** (`TerraformFileParser.ts`):
+```typescript
+import { logger } from '@nx/devkit';
+
+try {
+  // Parse file
+} catch (error) {
+  logger.warn(`Failed to parse ${filePath}: ${error.message}`);
+}
+```
+
+### output
+
+Output utilities for formatted console output.
+
+```typescript
+import { output } from '@nx/devkit';
+
+output.log({ title: 'Success', bodyLines: ['Operation completed'] });
+```
+
+## Plugin APIs
+
+### CreateNodesV2 (Project Discovery)
+
+Used for automatic project discovery and inferred tasks.
+
+```typescript
+import {
+  CreateNodesV2,
+  CreateNodesContextV2,
+  createNodesFromFiles,
+  ProjectConfiguration,
+} from '@nx/devkit';
+
+const createNodesV2: CreateNodesV2<PluginOptions> = [
+  '**/project.json', // Glob pattern for config files
+  async (configFiles, options, context) => {
+    return await createNodesFromFiles(
+      (configFile, options, context) =>
+        createNodesInternal(configFile, options, context),
+      configFiles,
+      options,
+      context
+    );
+  },
+];
+
+async function createNodesInternal(
+  configFilePath: string,
+  _options: PluginOptions,
+  context: CreateNodesContextV2
+) {
+  const projectRoot = dirname(configFilePath);
+  const projectJsonContent: ProjectConfiguration = JSON.parse(
+    readFileSync(join(context.workspaceRoot, configFilePath)).toString()
+  );
+
+  // Check metadata to determine if this is a Terraform project
+  const terraformProjectType =
+    projectJsonContent.metadata?.[PLUGIN_NAME]?.projectType;
+
+  if (!terraformProjectType) {
+    return {};
+  }
+
+  // Return targets configuration
+  return {
+    projects: {
+      [projectRoot]: {
+        targets: projectTargets,
+      },
+    },
+  };
+}
+```
+
+**Example from codebase** (`targets/createNodes.ts`):
+```typescript
+export const createNodesV2: CreateNodesV2<NxTerraformPluginOptions> = [
+  '**/project.json',
+  async (configFiles, options, context) => {
+    return await createNodesFromFiles(
+      (configFile, options, context) =>
+        createNodesInternal(configFile, options, context),
+      configFiles,
+      options,
+      context
+    );
+  },
+];
+```
+
+### CreateDependencies (Dependency Management)
+
+Used for automatic dependency graph creation.
+
+```typescript
+import {
+  CreateDependencies,
+  CreateDependenciesContext,
+  RawProjectGraphDependency,
+} from '@nx/devkit';
+
+export const createDependencies: CreateDependencies<PluginOptions> = async (
+  _,
+  ctx: CreateDependenciesContext
+) => {
+  const results: RawProjectGraphDependency[] = [];
+
+  for (const [projectName, projectConfig] of Object.entries(ctx.projects)) {
+    // Create dependencies based on metadata or file analysis
+    const backendProject =
+      projectConfig.metadata?.[PLUGIN_NAME]?.backendProject;
+
+    if (backendProject && ctx.projects[backendProject]) {
+      results.push({
+        source: projectName,
+        target: backendProject,
+        type: 'static',
+        sourceFile: join(projectConfig.root, 'project.json'),
+      });
+    }
+  }
+
+  return results;
+};
+```
+
+**Example from codebase** (`dependencies/createDependencies.ts`):
+```typescript
+export const createDependencies: CreateDependencies<
+  NxTerraformPluginOptions
+> = async (_, ctx: CreateDependenciesContext) => {
+  const results: RawProjectGraphDependency[] = [];
+
+  for (const [projectName, projectConfig] of Object.entries(ctx.projects)) {
+    const backendProject =
+      projectConfig.metadata?.[PLUGIN_NAME]?.backendProject;
+
+    if (backendProject) {
+      if (ctx.projects[backendProject]) {
+        validateAndAddDependency(
+          createStaticDependency(
+            projectName,
+            backendProject,
+            path.join(projectConfig.root, 'project.json')
+          ),
+          ctx,
+          results
+        );
+      }
+    }
+  }
+
+  return results;
+};
+```
+
+## Task Utilities
+
+### runTasksInSerial
+
+Run tasks in sequence (useful for generators that compose other generators).
+
+```typescript
+import { runTasksInSerial, Tree } from '@nx/devkit';
+
+export async function presetGenerator(tree: Tree, options: Schema) {
+  const tasks = [];
+
+  // Run generators
+  await initGenerator(tree);
+  await terraformBackendGenerator(tree, { ... });
+
+  return runTasksInSerial(...tasks);
+}
+```
+
+**Example from codebase** (`preset/generator.ts`):
+```typescript
+export async function presetGenerator(tree: Tree, options: PresetGeneratorSchema) {
+  const tasks = [];
+
+  await initGenerator(tree);
+  // ... other generators
+
+  return runTasksInSerial(...tasks);
+}
+```
+
+## Testing Utilities
+
+### createTreeWithEmptyWorkspace
+
+Create a test Tree with empty workspace for generator tests.
+
+```typescript
+import { createTreeWithEmptyWorkspace } from '@nx/devkit';
+import { readProjectConfiguration } from '@nx/devkit';
+
+describe('terraform-backend generator', () => {
+  it('should create project configuration', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    
+    await terraformBackendGenerator(tree, {
+      name: 'my-backend',
+      backendType: 'aws-s3',
+    });
+
+    const config = readProjectConfiguration(tree, 'my-backend');
+    expect(config.projectType).toBe('application');
+  });
+});
+```
+
+**Example from codebase** (all generator test files):
+```typescript
+import { createTreeWithEmptyWorkspace } from '@nx/devkit';
+import { readProjectConfiguration } from '@nx/devkit';
+
+describe('terraform-backend generator', () => {
+  it('should generate project configuration', async () => {
+    const tree = createTreeWithEmptyWorkspace();
+    await terraformBackendGenerator(tree, options);
+    
+    const config = readProjectConfiguration(tree, options.name);
+    expect(config.projectType).toEqual('application');
+  });
+});
+```
+
+## Common Patterns
+
+### Generator Function Signature
+
+```typescript
+import { Tree } from '@nx/devkit';
+import { GeneratorSchema } from './schema';
+
+export async function generatorName(
+  tree: Tree,
+  options: GeneratorSchema
+) {
+  // Implementation
+  await formatFiles(tree);
+}
+
+export default generatorName;
+```
+
+### Normalization Pattern
+
+```typescript
+const normalizeOptions = (
+  options: GeneratorSchema
+): GeneratorNormalizedSchema => ({
+  ...options,
+  optionalField: options.optionalField || defaultValue,
+  ignoreFile: '.gitignore',
+  tmpl: '', // For __tmpl__ suffix stripping
+});
+```
+
+### Metadata Access Pattern
+
+```typescript
+import { PLUGIN_NAME } from '../../constants';
+
+const metadata = projectConfig.metadata?.[PLUGIN_NAME];
+const projectType = metadata?.projectType;
+const backendProject = metadata?.backendProject;
+```
+
+## Best Practices
+
+1. **Always use Tree API** in generators, never `fs` directly
+2. **Always call `formatFiles()`** after generating files
+3. **Use `PLUGIN_NAME` constant** for metadata access, not hardcoded strings
+4. **Use `joinPathFragments()`** for cross-platform path joining
+5. **Validate inputs early** in generator functions
+6. **Use `createTreeWithEmptyWorkspace()`** for generator tests
+7. **Export both default and named exports** for generators
+8. **Use `readProjectConfiguration()`** before `updateProjectConfiguration()`
+9. **Handle errors gracefully** in plugin APIs (CreateNodesV2, CreateDependencies)
+10. **Return empty objects** (`{}`) from plugin APIs when project should be skipped
+
+## Additional Resources
+
+- [Nx Devkit Documentation](https://nx.dev/docs/reference/devkit)
+- [Nx Plugin Development Guide](https://nx.dev/docs/plugin-features/use-plugin-generators)
+- [Inferred Tasks (Project Crystal)](https://nx.dev/docs/core-concepts/inferred-tasks)

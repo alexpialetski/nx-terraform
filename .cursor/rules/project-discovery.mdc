@@ -1,7 +1,8 @@
 ---
 description: How Terraform projects are discovered via CreateNodesV2 API, project types, and discovery logic
 globs:
-  - "**/inferedTasks.ts"
+  - "**/createNodes.ts"
+  - "**/targets/**"
   - "**/main.tf"
   - "**/project.json"
 alwaysApply: false
@@ -12,31 +13,41 @@ alwaysApply: false
 ## Discovery Mechanism
 
 The plugin uses Nx's `CreateNodesV2` API to automatically discover Terraform projects.
+**For detailed CreateNodesV2 implementation patterns, see `nx-devkit-utilities.mdc`.**
 
 ## Discovery Logic
 
-- **Config file pattern**: `**/main.tf` (defined in `packages/nx-terraform/src/inferedTasks.ts`)
+- **Config file pattern**: `**/project.json` (defined in `packages/nx-terraform/src/targets/createNodes.ts`)
+- **Discovery mechanism**: Uses `CreateNodesV2` API with `**/project.json` glob pattern
 - **Discovery requirements**: 
-  - Must have `main.tf` file
-  - Must have `project.json` in the same directory
-- **Type detection**: Based on `projectType` and `metadata.backendProject` in `project.json`
+  - Must have `project.json` file (discovery trigger)
+  - Must have `metadata[PLUGIN_NAME].projectType` set in `project.json` (where `PLUGIN_NAME = 'nx-terraform'`)
+  - `main.tf` file is required for valid Terraform projects but not for discovery trigger
+- **Type detection**: Based on `metadata[PLUGIN_NAME].projectType` in `project.json`:
+  - `'backend'`: Backend projects
+  - `'module'`: Simple module projects
+  - `'stateful'`: Stateful projects with backend reference
 
 ## Project Types
 
 ### Backend Projects
-- `projectType: 'application'`
-- No `metadata.backendProject`
+- `projectType: 'application'` in `project.json`
+- `metadata[PLUGIN_NAME].projectType: 'backend'` (where `PLUGIN_NAME = 'nx-terraform'`)
+- No `metadata[PLUGIN_NAME].backendProject`
 - Manages remote state infrastructure (e.g., S3 bucket)
 - Generates `backend.config` files
 
 ### Stateful Projects
-- `projectType: 'application'`
-- Has `metadata.backendProject` pointing to backend project
+- `projectType: 'application'` in `project.json`
+- `metadata[PLUGIN_NAME].projectType: 'stateful'` or `'module'` with `backendProject` set
+- Has `metadata[PLUGIN_NAME].backendProject` pointing to backend project
 - Uses remote state via referenced backend
 - Full Terraform lifecycle support
 
 ### Module Projects
-- `projectType: 'library'`
+- `projectType: 'application'` in `project.json` (all Terraform projects use `'application'`)
+- `metadata[PLUGIN_NAME].projectType: 'module'`
+- No `metadata[PLUGIN_NAME].backendProject`
 - Reusable Terraform modules
 - No state management
 - Stub targets only
@@ -45,16 +56,19 @@ The plugin uses Nx's `CreateNodesV2` API to automatically discover Terraform pro
 
 When modifying discovery logic:
 
-1. Update `createNodesInternal` in `packages/nx-terraform/src/inferedTasks.ts`
-2. Modify target selection logic based on project metadata
+1. Update `createNodesInternal` in `packages/nx-terraform/src/targets/createNodes.ts`
+2. Modify target selection logic based on `metadata[PLUGIN_NAME].projectType` and `metadata[PLUGIN_NAME].backendProject`
 3. Test with different project configurations
 4. Ensure all three project types are handled correctly
+5. Access metadata using `PLUGIN_NAME` constant from `constants.ts`, not hardcoded strings
+6. **For CreateNodesV2 API patterns and examples, see `nx-devkit-utilities.mdc`**
 
 ## Project Configuration Requirements
 
 Projects must have:
-- `project.json` with `projectType: 'application'` or `'library'`
-- `main.tf` file (required for discovery)
+- `project.json` with `projectType: 'application'` (all Terraform projects use `'application'`)
+- `metadata[PLUGIN_NAME].projectType` set to `'backend'`, `'module'`, or `'stateful'` (where `PLUGIN_NAME = 'nx-terraform'`)
+- `main.tf` file (required for valid Terraform projects, but discovery is triggered by `project.json`)
 - Optional `tfvars/dev.tfvars` and `tfvars/prod.tfvars` for configurations
 - Backend projects have `backend.config` file (generated after apply)
-- Stateful projects reference backend via `metadata.backendProject` in `project.json`
+- Stateful projects reference backend via `metadata[PLUGIN_NAME].backendProject` in `project.json`

@@ -19,7 +19,8 @@ A CLI tool for creating new Nx workspaces with Terraform support.
 ### Features
 - Interactive workspace setup with prompts
 - Automatically configures nx-terraform plugin
-- Creates initial backend project named `terraform-setup`
+- Creates initial backend project named `terraform-setup` (if `backendType` provided)
+- Creates initial Terraform module named `terraform-infra` (connected to backend if `backendType` provided, or simple module if not)
 - Supports AWS S3 and local backends
 - Handles package manager setup, git initialization, and Nx Cloud integration
 
@@ -31,30 +32,38 @@ A CLI tool for creating new Nx workspaces with Terraform support.
 
 ### Integration with Preset
 - Calls `createWorkspace` with preset: `nx-terraform@<version>`
-- Preset generator runs `init` + `terraform-backend` generators
+- Preset generator runs:
+  1. `init` generator (registers plugin)
+  2. `terraform-backend` generator (creates `terraform-setup` backend, only if `backendType` provided)
+  3. `terraform-module` generator (creates `terraform-infra` module, stateful if backend exists, simple if not)
 - Backend project name is hardcoded as `'terraform-setup'` in preset
+- Module project name is hardcoded as `'terraform-infra'` in preset
 
 ## Preset Generator
 
 ### Usage
-- Direct: `nx g @nx-terraform/plugin:preset --projectName=terraform-setup --backendType=aws-s3`
+- Direct: `nx g nx-terraform:preset --projectName=terraform-setup --backendType=aws-s3`
 - Via CLI: Automatically called by `create-nx-terraform-app`
 
 ### What It Does
 1. Runs `init` generator (registers plugin)
-2. Creates backend project via `terraform-backend` generator
-3. Sets up complete workspace structure
+2. Creates backend project via `terraform-backend` generator (only if `backendType` provided)
+   - Creates `terraform-setup` backend project
+3. Creates Terraform module via `terraform-module` generator
+   - Creates `terraform-infra` module project
+   - If `backendType` provided: creates stateful module connected to `terraform-setup` backend
+   - If `backendType` not provided: creates simple module without backend
 
 ### Options
-- `projectName`: Name of backend project (default: 'terraform-setup')
-- `backendType`: 'aws-s3' or 'local' (required)
+- `projectName`: Workspace name (currently not used for project names, which are hardcoded)
+- `backendType`: 'aws-s3' or 'local' (optional, if not provided only creates simple module)
 
 ## Adding Terraform to Existing Workspace
 
 ### Manual Process
 1. `nx add nx-terraform` - Installs plugin
-2. `nx g @nx-terraform/plugin:init` - Registers plugin
-3. `nx g @nx-terraform/plugin:terraform-backend <name> --backendType=<type>` - Creates backend
+2. `nx g nx-terraform:init` - Registers plugin
+3. `nx g nx-terraform:terraform-backend <name> --backendType=<type>` - Creates backend
 
 ### Notes
 - Use `create-nx-terraform-app` for new workspaces (recommended)
