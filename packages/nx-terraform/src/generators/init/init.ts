@@ -1,4 +1,10 @@
-import { formatFiles, readNxJson, Tree, updateNxJson } from '@nx/devkit';
+import {
+  addDependenciesToPackageJson,
+  formatFiles,
+  readNxJson,
+  Tree,
+  updateNxJson,
+} from '@nx/devkit';
 import { PLUGIN_NAME } from '../../constants';
 
 export async function initGenerator(tree: Tree) {
@@ -24,7 +30,17 @@ export async function initGenerator(tree: Tree) {
 
   updateNxJson(tree, nxJson);
 
+  const installTask = addDependenciesToPackageJson(
+    tree,
+    {},
+    {
+      '@cdktf/hcl2json': '^0.21.0',
+    }
+  );
+
   await formatFiles(tree);
+
+  return installTask;
 }
 
 export default initGenerator;
