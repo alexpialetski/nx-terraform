@@ -1,3 +1,13 @@
+## 0.7.1 (2025-11-13)
+
+### 🩹 Fixes
+
+- add @cdktf/hcl2json as a dev dependency ([ad33143](https://github.com/alexpialetski/nx-terraform/commit/ad33143))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+
 ## 0.7.0 (2025-11-09)
 
 ### 🚀 Features
