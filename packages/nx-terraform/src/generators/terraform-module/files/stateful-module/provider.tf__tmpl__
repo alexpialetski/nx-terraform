@@ -1,6 +1,9 @@
 <% if (backendType === 'local') { %># nx-terraform-metadata-start
 # providers: local
 # nx-terraform-metadata-end
+<% } else if (backendType === 'aws-s3') { %># nx-terraform-metadata-start
+# providers: aws
+# nx-terraform-metadata-end
 <% } %>
 
 terraform {
@@ -16,6 +19,11 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.4"
     }
+    <% } else if (backendType === 'aws-s3') { %>
+      aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
     <% } %>
   }
 }
@@ -25,3 +33,11 @@ terraform {
 # provider "aws" {
 #   region = var.region
 # }
+
+<% if (backendType === 'local') { %>
+provider local {}
+<% } else if (backendType === 'aws-s3') { %>
+provider "aws" {
+  region = var.region
+}
+<% } %>

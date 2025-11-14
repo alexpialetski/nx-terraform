@@ -17,14 +17,6 @@ terraform {
       version = "2.3.5"
     }
   }
-
-  # needed for NX cache reset when new module is added
-  # required_modules {
-  #   github-oidc = {
-  #     source  = "terraform-module/github-oidc-provider/aws"
-  #     version = "~> 1"
-  #   }
-  # }
 }
 
 provider "aws" {
