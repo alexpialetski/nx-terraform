@@ -12,7 +12,7 @@ export async function presetGenerator(
   const tasks = [];
 
   // Add nx-terraform plugin to the workspace
-  await initGenerator(tree);
+  tasks.push(await initGenerator(tree));
 
   // Scaffold terraform backend project only if backendType is provided
   if (options.backendType) {

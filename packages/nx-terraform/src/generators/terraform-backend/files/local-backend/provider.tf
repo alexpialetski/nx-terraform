@@ -11,4 +11,4 @@ terraform {
   }
 }
 
-
+provider "local" {}
