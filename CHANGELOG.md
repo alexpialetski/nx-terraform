@@ -1,3 +1,13 @@
+## 0.7.2 (2025-11-14)
+
+### 🩹 Fixes
+
+- installing dev dependencies and skip unnecessary sync from the start ([60f471b](https://github.com/alexpialetski/nx-terraform/commit/60f471b))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+
 ## 0.7.1 (2025-11-13)
 
 ### 🩹 Fixes
