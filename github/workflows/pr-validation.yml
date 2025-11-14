@@ -1,0 +1,93 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  # Nx Cloud configuration
+  NX_CLOUD_DISTRIBUTED_EXECUTION: false
+  NX_BRANCH: ${{ github.event.number }}
+  
+  # AWS Configuration (read-only for validation)
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  
+  # Terraform Configuration - will be set dynamically after AWS authentication
+  TF_WORKSPACE: default
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/setup-terraform
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate Terraform (Cluster)
+        run: |
+          npx nx run cluster:terraform-validate
+
+      - name: Plan Terraform (Cluster)
+        run: |
+          npx nx run cluster:terraform-plan --configuration=stable
+
+      - name: Comment PR with Plan Results
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const comment = '## 🔍 Terraform Plan Results\n\n' +
+              '📋 **Deployment Flow:**\n' +
+              '1. ✅ Setup infrastructure deployed (creates backend S3 bucket)\n' +
+              '2. 📋 Cluster infrastructure planned (uses backend created by setup)\n\n' +
+              '> 💡 This PR validates the complete deployment flow including backend dependencies.\n\n' +
+              '**Next Steps:**\n' +
+              '- [ ] Review the Terraform changes\n' +
+              '- [ ] Ensure all security checks pass\n' +
+              '- [ ] Get approval from infrastructure team\n';
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          output_format: cli
+          soft_fail: true  # Don't fail the build, just report issues
+
+      - name: Run TFSec
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        with:
+          github_token: ${{ github.token }}
+          soft_fail_commenter: true

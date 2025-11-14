@@ -25,6 +25,11 @@
       "factory": "./src/generators/sync-terraform-metadata/sync-terraform-metadata",
       "schema": "./src/generators/sync-terraform-metadata/schema.json",
       "description": "sync-terraform-metadata generator"
+    },
+    "ci-cd": {
+      "factory": "./src/generators/ci-cd/ci-cd",
+      "schema": "./src/generators/ci-cd/schema.json",
+      "description": "ci-cd generator"
     }
   }
 }

@@ -1,0 +1,119 @@
+name: Deploy K8s Applications
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to target'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - default
+
+env:
+  # Nx Cloud configuration
+  NX_CLOUD_DISTRIBUTED_EXECUTION: false
+  NX_BRANCH: ${{ github.event.number || github.ref_name }}
+
+  # AWS Configuration
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  # Terraform Configuration - will be set dynamically after AWS authentication
+  TF_WORKSPACE: ${{ github.event.inputs.environment }}
+
+jobs:
+  # Job 1: Connect to K8s and Deploy Applications
+  deploy-k8s:
+    runs-on: ubuntu-latest
+    environment: production
+    # Only run if infrastructure deployment was successful
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and AWS
+        id: setup-node-aws
+        uses: ./.github/actions/setup-node-aws
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Connect to K3s Cluster
+        run: |
+          # Use environment from input or default to 'dev'
+          npx nx run local:connect-kubectl -- --workspace $TF_WORKSPACE
+          # Export kubeconfig for subsequent steps
+          echo "KUBECONFIG=$PWD/packages/local/kubeconfig" >> $GITHUB_ENV
+
+      - name: Deploy Sample Application (Example)
+        run: |
+          echo "Deploying sample application..."
+
+          # Create a sample namespace
+          kubectl create namespace sample-app --dry-run=client -o yaml | kubectl apply -f -
+
+          # Deploy a simple nginx application as example
+          cat << EOF | kubectl apply -f -
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx-deployment
+            namespace: sample-app
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                - name: nginx
+                  image: nginx:latest
+                  ports:
+                  - containerPort: 80
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: nginx-service
+            namespace: sample-app
+          spec:
+            selector:
+              app: nginx
+            ports:
+            - protocol: TCP
+              port: 80
+              targetPort: 80
+            type: ClusterIP
+          EOF
+
+          # Wait for deployment to be ready
+          kubectl rollout status deployment/nginx-deployment -n sample-app --timeout=300s
+
+          # Show deployment status
+          kubectl get pods -n sample-app
+          kubectl get services -n sample-app
+
+          echo "✅ Sample application deployed successfully"
+
+      - name: Cleanup Connection
+        if: always()
+        run: |
+          npx nx run local:disconnect-kubectl
+          echo "✅ [INFO] K3s connection cleanup completed"

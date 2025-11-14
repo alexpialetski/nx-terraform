@@ -8,6 +8,13 @@ env:
   # Nx Cloud configuration
   NX_CLOUD_DISTRIBUTED_EXECUTION: false
   NX_BRANCH: ${{ github.event.number || github.ref_name }}
+<% if (hasAwsBackend) { -%>
+
+  # AWS Configuration (only needed for AWS S3 backends)
+  AWS_REGION: ${{ vars.AWS_REGION || '<%= awsRegion %>' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+<% } -%>
 
   # Terraform Configuration
   TF_WORKSPACE: default
@@ -27,15 +34,26 @@ jobs:
         id: node-aws-setup
         uses: ./.github/actions/setup-node-aws
         with:
+<% if (hasAwsBackend) { -%>
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+<% } else { -%>
           aws-access-key-id: ''
           aws-secret-access-key: ''
           aws-region: ''
+<% } -%>
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
+<% if (hasAwsBackend) { -%>
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
+<% } else { -%>
           aws-region: ''
           aws-account-id: ''
+<% } -%>
 
       - name: Validate Terraform
         run: npx nx affected -t terraform-validate
@@ -49,8 +67,9 @@ jobs:
         with:
           name: terraform-plans
           path: |
-            packages/terraform-infra/tfplan
-            packages/terraform-setup/tfplan
+<% terraformProjects.forEach(function(project) { -%>
+            packages/<%= project %>/tfplan
+<% }); -%>
           retention-days: 1
 
   # Job 2: Deploy (only on main branch)
@@ -70,15 +89,26 @@ jobs:
         id: node-aws-setup
         uses: ./.github/actions/setup-node-aws
         with:
+<% if (hasAwsBackend) { -%>
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+<% } else { -%>
           aws-access-key-id: ''
           aws-secret-access-key: ''
           aws-region: ''
+<% } -%>
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
+<% if (hasAwsBackend) { -%>
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
+<% } else { -%>
           aws-region: ''
           aws-account-id: ''
+<% } -%>
 
       - name: Download Terraform Plans
         uses: actions/download-artifact@v4
@@ -104,17 +134,30 @@ jobs:
         id: node-aws-setup
         uses: ./.github/actions/setup-node-aws
         with:
+<% if (hasAwsBackend) { -%>
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+<% } else { -%>
           aws-access-key-id: ''
           aws-secret-access-key: ''
           aws-region: ''
+<% } -%>
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
+<% if (hasAwsBackend) { -%>
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
+<% } else { -%>
           aws-region: ''
           aws-account-id: ''
+<% } -%>
 
       - name: Destroy Infrastructure
         run: |
-          npx nx run terraform-infra:terraform-destroy
-          npx nx run terraform-setup:terraform-destroy
+<% terraformProjects.forEach(function(project) { -%>
+          npx nx run <%= project %>:terraform-destroy
+<% }); -%>
+

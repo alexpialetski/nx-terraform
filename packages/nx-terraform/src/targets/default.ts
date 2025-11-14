@@ -104,7 +104,7 @@ export const TERRAFORM_FMT_TARGET: TargetConfiguration = {
   executor: 'nx:run-commands',
   options: {
     cwd: '{projectRoot}',
-    command: 'terraform fmt -write=true',
+    command: 'terraform fmt',
   },
   inputs: [...TERRAFORM_FILES_INPUTS],
 };

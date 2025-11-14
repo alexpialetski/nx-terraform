@@ -2,7 +2,17 @@ export default {
   displayName: 'nx-terraform-e2e',
   preset: '../../jest.preset.js',
   transform: {
-    '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+      },
+    ],
+  },
+  transformIgnorePatterns: ['/node_modules/(?!(@pshevche/act-test-runner)/)'],
+  moduleNameMapper: {
+    '^@pshevche/act-test-runner$':
+      '<rootDir>/../../node_modules/@pshevche/act-test-runner/dist/index.js',
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/packages/nx-terraform-e2e',

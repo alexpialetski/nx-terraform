@@ -1,0 +1,49 @@
+name: 'Setup Node and AWS Environment'
+description: 'Sets up Node.js environment with optional AWS credentials'
+inputs:
+  aws-access-key-id:
+    description: 'AWS Access Key ID (optional, only needed for AWS backends)'
+    required: false
+  aws-secret-access-key:
+    description: 'AWS Secret Access Key (optional, only needed for AWS backends)'
+    required: false
+  aws-region:
+    description: 'AWS Region (optional, only needed for AWS backends)'
+    required: false
+  node-version:
+    description: 'Node.js version'
+    required: false
+    default: '20'
+outputs:
+  aws-account-id:
+    description: 'AWS Account ID retrieved from credentials (empty if AWS not configured)'
+    value: ${{ steps.configure-aws.outputs.aws-account-id }}
+  aws-region:
+    description: 'AWS Region being used (empty if AWS not configured)'
+    value: ${{ inputs.aws-region }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+
+    - name: Sets the base and head SHAs required for the nx affected commands in CI
+      uses: nrwl/nx-set-shas@v4
+
+    - name: Configure AWS credentials
+      id: configure-aws
+      if: ${{ inputs.aws-access-key-id != '' && inputs.aws-secret-access-key != '' && inputs.aws-region != '' }}
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+        output-credentials: true
+

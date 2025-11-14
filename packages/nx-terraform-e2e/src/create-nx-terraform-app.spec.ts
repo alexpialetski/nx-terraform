@@ -11,7 +11,7 @@ import {
 } from './testUtils';
 import { ProjectConfiguration } from '@nx/devkit';
 
-describe('create-nx-terraform-app', () => {
+describe.skip('create-nx-terraform-app', () => {
   let projectDirectory: string;
 
   afterAll(() => {

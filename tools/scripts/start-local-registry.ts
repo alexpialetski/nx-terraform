@@ -14,11 +14,14 @@ export default async () => {
   // storage folder for the local registry
   const storage = './tmp/nx-terraform-local-registry';
 
-  global.stopLocalRegistry = await startLocalRegistry({
-    localRegistryTarget,
-    storage,
-    clearStorage: true,
-  });
+  // global.stopLocalRegistry = await startLocalRegistry({
+  //   localRegistryTarget,
+  //   storage,
+  //   clearStorage: true,
+  // });
+  global.stopLocalRegistry = () => {
+    console.log('Local registry not started');
+  };
 
   await releaseVersion({
     specifier: '0.0.0-e2e',

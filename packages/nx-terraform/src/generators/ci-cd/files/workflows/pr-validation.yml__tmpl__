@@ -1,0 +1,115 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  # Nx Cloud configuration
+  NX_CLOUD_DISTRIBUTED_EXECUTION: false
+  NX_BRANCH: ${{ github.event.number }}
+<% if (hasAwsBackend) { -%>
+  
+  # AWS Configuration (only needed for AWS S3 backends)
+  AWS_REGION: ${{ vars.AWS_REGION || '<%= awsRegion %>' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+<% } -%>
+  
+  # Terraform Configuration
+  TF_WORKSPACE: default
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and AWS
+        id: node-aws-setup
+        uses: ./.github/actions/setup-node-aws
+        with:
+<% if (hasAwsBackend) { -%>
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+<% } else { -%>
+          aws-access-key-id: ''
+          aws-secret-access-key: ''
+          aws-region: ''
+<% } -%>
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/setup-terraform
+        with:
+<% if (hasAwsBackend) { -%>
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
+<% } else { -%>
+          aws-region: ''
+          aws-account-id: ''
+<% } -%>
+
+      - name: Validate Terraform
+        run: npx nx affected -t terraform-validate
+
+      - name: Plan Terraform
+        run: npx nx affected -t terraform-plan --configuration=stable
+
+      - name: Comment PR with Plan Results
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const comment = '## 🔍 Terraform Plan Results\n\n' +
+              '📋 **Terraform projects validated:**\n' +
+<% terraformProjects.forEach(function(project) { -%>
+              '- <%= project %>\n' +
+<% }); -%>
+              '\n> 💡 This PR validates the complete deployment flow including backend dependencies.\n\n' +
+              '**Next Steps:**\n' +
+              '- [ ] Review the Terraform changes\n' +
+              '- [ ] Ensure all security checks pass\n' +
+              '- [ ] Get approval from infrastructure team\n';
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+<% if (enableSecurityScan) { -%>
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          output_format: cli
+          soft_fail: true  # Don't fail the build, just report issues
+
+      - name: Run TFSec
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.2.0
+        with:
+          github_token: ${{ github.token }}
+          soft_fail_commenter: true
+<% } -%>
+

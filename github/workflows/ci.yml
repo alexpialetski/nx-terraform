@@ -9,11 +9,16 @@ env:
   NX_CLOUD_DISTRIBUTED_EXECUTION: false
   NX_BRANCH: ${{ github.event.number || github.ref_name }}
 
-  # Terraform Configuration
+  # AWS Configuration
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  # Terraform Configuration - will be set dynamically after AWS authentication
   TF_WORKSPACE: default
 
 jobs:
-  # Job 1: Main CI - Validate and Plan
+  # Job 1: Main CI - Lint, Format, Plan
   main:
     runs-on: ubuntu-latest
 
@@ -27,21 +32,18 @@ jobs:
         id: node-aws-setup
         uses: ./.github/actions/setup-node-aws
         with:
-          aws-access-key-id: ''
-          aws-secret-access-key: ''
-          aws-region: ''
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
-          aws-region: ''
-          aws-account-id: ''
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
 
-      - name: Validate Terraform
-        run: npx nx affected -t terraform-validate
-
-      - name: Plan Terraform
-        run: npx nx affected -t terraform-plan --configuration=stable
+      - name: Plan Terraform (Cluster)
+        run: npx nx run cluster:terraform-plan --configuration=stable
 
       - name: Upload Terraform Plans
         if: always()
@@ -49,16 +51,14 @@ jobs:
         with:
           name: terraform-plans
           path: |
-            packages/terraform-infra/tfplan
-            packages/terraform-setup/tfplan
+            packages/cluster/tfplan
           retention-days: 1
 
-  # Job 2: Deploy (only on main branch)
+  # Job 3: Deploy (only on main branch)
   deploy:
     runs-on: ubuntu-latest
     needs: [main]
     environment: production
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout
@@ -70,25 +70,25 @@ jobs:
         id: node-aws-setup
         uses: ./.github/actions/setup-node-aws
         with:
-          aws-access-key-id: ''
-          aws-secret-access-key: ''
-          aws-region: ''
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
-          aws-region: ''
-          aws-account-id: ''
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
 
       - name: Download Terraform Plans
         uses: actions/download-artifact@v4
         with:
           name: terraform-plans
 
-      - name: Deploy Infrastructure
-        run: npx nx affected -t terraform-apply --configuration=stable
+      - name: Deploy Cluster Infrastructure
+        run: npx nx run cluster:terraform-apply --configuration=stable
 
-  # Job 3: Cleanup (manual trigger for destroy)
+  # Job 4: Cleanup (manual trigger for destroy)
   cleanup:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
@@ -104,17 +104,17 @@ jobs:
         id: node-aws-setup
         uses: ./.github/actions/setup-node-aws
         with:
-          aws-access-key-id: ''
-          aws-secret-access-key: ''
-          aws-region: ''
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform Environment
         uses: ./.github/actions/setup-terraform
         with:
-          aws-region: ''
-          aws-account-id: ''
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
 
       - name: Destroy Infrastructure
         run: |
-          npx nx run terraform-infra:terraform-destroy
-          npx nx run terraform-setup:terraform-destroy
+          npx nx run cluster:terraform-destroy
+          npx nx run setup:terraform-destroy

@@ -1,0 +1,101 @@
+name: Manual Infrastructure Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      project:
+        description: 'Project to target'
+        required: true
+        default: '<%= terraformProjects[0] || "project" %>'
+        type: choice
+        options:
+<% terraformProjects.forEach(function(project) { -%>
+          - <%= project %>
+<% }); -%>
+      environment:
+        description: 'Environment to target'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - default
+
+env:
+<% if (hasAwsBackend) { -%>
+  # AWS Configuration (only needed for AWS S3 backends)
+  AWS_REGION: ${{ vars.AWS_REGION || '<%= awsRegion %>' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+<% } -%>
+
+  # Terraform Configuration
+  TF_WORKSPACE: ${{ github.event.inputs.environment }}
+
+jobs:
+  infrastructure:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and AWS
+        id: node-aws-setup
+        uses: ./.github/actions/setup-node-aws
+        with:
+<% if (hasAwsBackend) { -%>
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+<% } else { -%>
+          aws-access-key-id: ''
+          aws-secret-access-key: ''
+          aws-region: ''
+<% } -%>
+
+      - name: Setup Terraform Environment
+        uses: ./.github/actions/setup-terraform
+        with:
+<% if (hasAwsBackend) { -%>
+          aws-region: ${{ env.AWS_REGION }}
+          aws-account-id: ${{ steps.node-aws-setup.outputs.aws-account-id }}
+<% } else { -%>
+          aws-region: ''
+          aws-account-id: ''
+<% } -%>
+
+      - name: Execute Terraform Action
+        run: |
+          case "${{ github.event.inputs.action }}" in
+            "plan")
+              echo "Planning ${{ github.event.inputs.project }}..."
+              npx nx run ${{ github.event.inputs.project }}:terraform-plan
+              ;;
+            "apply")
+              echo "Applying ${{ github.event.inputs.project }}..."
+              CONFIGURATION=${{ github.event.inputs.environment }}
+              if [ "$CONFIGURATION" == "dev" ]; then
+                npx nx run ${{ github.event.inputs.project }}:terraform-apply
+              else
+                npx nx run ${{ github.event.inputs.project }}:terraform-apply --configuration=stable
+              fi
+              ;;
+            "destroy")
+              echo "Destroying ${{ github.event.inputs.project }}..."
+              npx nx run ${{ github.event.inputs.project }}:terraform-destroy
+              ;;
+          esac
+

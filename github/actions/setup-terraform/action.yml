@@ -1,0 +1,56 @@
+name: 'Setup Terraform Environment'
+description: 'Sets up only the Terraform environment'
+inputs:
+  aws-region:
+    description: 'AWS Region'
+    required: true
+  aws-account-id:
+    description: 'AWS Account ID'
+    required: true
+  terraform-version:
+    description: 'Terraform version'
+    required: false
+    default: '~1.8.0'
+  skip-setup-apply:
+    description: 'Skip the setup apply step'
+    required: false
+    default: 'false'
+outputs:
+  aws-region:
+    description: 'AWS Region being used'
+    value: ${{ inputs.aws-region }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+
+    - name: Set Terraform variables from AWS context
+      run: |
+        echo "TF_VAR_region=${{ inputs.aws-region }}" >> $GITHUB_ENV
+        echo "TF_VAR_account_id=${{ inputs.aws-account-id }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Format Check
+      run: |
+        npx nx run-many -t terraform-fmt --parallel=3
+        # Check if any files were modified by formatting
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "Files need formatting. Please run 'npm run format' or 'npx nx run-many -t terraform-fmt'"
+          git diff
+          exit 1
+        fi
+      shell: bash
+
+    - name: Validate Terraform (Setup)
+      if: ${{ inputs.skip-setup-apply != 'true' }}
+      run: |
+        npx nx run setup:terraform-validate
+      shell: bash
+
+    - name: Apply Setup Infrastructure (creates backend for cluster)
+      if: ${{ inputs.skip-setup-apply != 'true' }}
+      run: npx nx run setup:terraform-apply
+      shell: bash

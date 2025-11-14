@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "CICDGenerator",
+  "title": "CI/CD Generator",
+  "type": "object",
+  "properties": {
+    "ciProvider": {
+      "type": "string",
+      "enum": ["github-actions"],
+      "default": "github-actions",
+      "description": "CI/CD provider to use",
+      "x-prompt": {
+        "message": "Which CI/CD provider?",
+        "type": "list",
+        "items": [
+          { "value": "github-actions", "label": "GitHub Actions" }
+        ]
+      }
+    },
+    "enableSecurityScan": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable security scanning in PR validation",
+      "x-prompt": "Enable security scanning in PR validation?"
+    }
+  },
+  "required": ["ciProvider"]
+}
+
