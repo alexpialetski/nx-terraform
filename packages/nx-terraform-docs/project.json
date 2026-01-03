@@ -1,0 +1,37 @@
+{
+  "name": "nx-terraform-docs",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/nx-terraform-docs",
+  "projectType": "application",
+  "tags": ["docs"],
+  "targets": {
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docusaurus start",
+        "cwd": "packages/nx-terraform-docs"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/build"],
+      "options": {
+        "command": "docusaurus build",
+        "cwd": "packages/nx-terraform-docs"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docusaurus serve",
+        "cwd": "packages/nx-terraform-docs"
+      }
+    },
+    "typecheck": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "tsConfig": "packages/nx-terraform-docs/tsconfig.json"
+      }
+    }
+  }
+}
