@@ -1,6 +1,6 @@
 {
   "name": "create-nx-terraform-app",
-  "version": "0.7.2",
+  "version": "0.8.1",
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
