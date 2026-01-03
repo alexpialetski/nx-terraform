@@ -46,6 +46,7 @@ alwaysApply: false
 - Target code: `packages/nx-terraform/src/targets/`
 - Plugin entry point: `packages/nx-terraform/src/inferedTasks.ts`
 - Public API: `packages/nx-terraform/src/index.ts`
+- Documentation: `packages/nx-terraform-docs/` (Docusaurus site)
 
 ## Build & Distribution
 

@@ -12,9 +12,14 @@ This is an Nx plugin for managing Terraform projects within an Nx monorepo. The 
 
 ## Documentation Structure
 
-- `README.md` (root) - Quick start guide and essential information for users
-- `packages/nx-terraform/README.md` - Main plugin documentation with comprehensive features, generators, targets, and examples
-- `packages/create-nx-terraform-app/README.md` - CLI tool documentation for workspace creation
-- Generator READMEs - Detailed documentation for each generator in `packages/nx-terraform/src/generators/*/README.md`
+- `README.md` (root) - Quick start guide and essential information for users, links to full documentation
+- `packages/nx-terraform-docs/` - Comprehensive Docusaurus documentation site
+  - Getting started guides, tutorials, and installation instructions
+  - Guides for project types, backends, dependencies, caching, configuration
+  - Reference documentation for all generators and targets
+  - Troubleshooting and best practices guides
+  - Example workflows and use cases
+  - Published to: https://alexpialetski.github.io/nx-terraform/
+- Generator and target documentation - All reference docs are in `packages/nx-terraform-docs/docs/reference/`
 
-When working on this project, always reference these documentation files for context before making changes.
+When working on this project, always reference the Docusaurus documentation site for context before making changes.

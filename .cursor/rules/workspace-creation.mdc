@@ -14,7 +14,7 @@ A CLI tool for creating new Nx workspaces with Terraform support.
 
 ### Usage
 - Run via: `npx create-nx-terraform-app <workspace-name>`
-- Documentation: `packages/create-nx-terraform-app/README.md`
+- Documentation: `packages/nx-terraform-docs/docs/getting-started/workspace-creation.md`
 
 ### Features
 - Interactive workspace setup with prompts
