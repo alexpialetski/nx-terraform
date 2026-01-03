@@ -15,25 +15,25 @@ The plugin provides five generators:
 1. **`init` Generator** - `packages/nx-terraform/src/generators/init/`
    - Adds the `nx-terraform` plugin to `nx.json`
    - Run via: `nx g nx-terraform:init`
-   - Documentation: `packages/nx-terraform/src/generators/init/README.md`
+   - Documentation: `packages/nx-terraform-docs/docs/reference/generators/init.md`
 
 2. **`terraform-backend` Generator** - `packages/nx-terraform/src/generators/terraform-backend/`
    - Creates a new Terraform backend project
    - Supports backend types: `aws-s3` or `local`
    - Run via: `nx g nx-terraform:terraform-backend`
-   - Documentation: `packages/nx-terraform/src/generators/terraform-backend/README.md`
+   - Documentation: `packages/nx-terraform-docs/docs/reference/generators/terraform-backend.md`
 
 3. **`preset` Generator** - `packages/nx-terraform/src/generators/preset/`
    - Initializes workspace with Terraform setup
    - Runs `init` generator and scaffolds initial backend project
    - Used when creating a new workspace: `npx create-nx-terraform-app`
-   - Documentation: `packages/nx-terraform/src/generators/preset/README.md`
+   - Documentation: `packages/nx-terraform-docs/docs/reference/generators/preset.md`
 
 4. **`terraform-module` Generator** - `packages/nx-terraform/src/generators/terraform-module/`
    - Creates Terraform modules (simple library or stateful application)
    - Supports backend integration for stateful modules
    - Run via: `nx g nx-terraform:terraform-module`
-   - Documentation: `packages/nx-terraform/src/generators/terraform-module/README.md`
+   - Documentation: `packages/nx-terraform-docs/docs/reference/generators/terraform-module.md`
 
 5. **`sync-terraform-metadata` Generator** - `packages/nx-terraform/src/generators/sync-terraform-metadata/`
    - Automatically syncs Terraform project metadata based on `.tf` file analysis
@@ -41,13 +41,13 @@ The plugin provides five generators:
    - Automatically invoked before `terraform-init` target execution
    - Updates `metadata[PLUGIN_NAME].projectType` based on backend block detection
    - Run via: `nx g nx-terraform:sync-terraform-metadata` or `nx sync`
-   - Documentation: `packages/nx-terraform/src/generators/sync-terraform-metadata/README.md`
+   - Documentation: `packages/nx-terraform-docs/docs/reference/generators/sync-terraform-metadata.md`
 
 ## Generator Development Rules
 
 When adding or modifying generators:
 
-1. Always read the generator's README.md first for implementation details
+1. Always read the generator's documentation in `packages/nx-terraform-docs/docs/reference/generators/` first for implementation details
 2. Create generator directory in `packages/nx-terraform/src/generators/<generator-name>/`
 3. Create `schema.json` with JSON Schema (Draft 07)
 4. Implement generator function with both default export and named export
@@ -55,7 +55,7 @@ When adding or modifying generators:
 6. Write tests (`*.spec.ts`) using Nx's testing utilities
 7. **For Tree API, formatFiles, and other Nx Devkit utilities, see `nx-devkit-utilities.mdc`**
 8. Template files with EJS should use `__tmpl__` suffix to avoid lint errors
-9. Update generator README.md with any significant changes
+9. Update generator documentation in `packages/nx-terraform-docs/docs/reference/generators/` with any significant changes
 
 ## Generator Template System
 
