@@ -1,3 +1,7 @@
+## 0.8.0 (2026-01-03)
+
+This was a version bump only, there were no code changes.
+
 ## 0.7.2 (2025-11-14)
 
 ### 🩹 Fixes
