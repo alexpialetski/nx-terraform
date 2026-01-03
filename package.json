@@ -6,6 +6,9 @@
     "prepare": "husky"
   },
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "dependencies": {
     "@nx/devkit": "22.0.2",
     "create-nx-workspace": "22.0.2",
