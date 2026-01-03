@@ -1,0 +1,30 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Network nodes representing projects -->
+  <circle cx="60" cy="80" r="30" fill="#623CE4" opacity="0.2" stroke="#623CE4" stroke-width="3"/>
+  <circle cx="60" cy="80" r="20" fill="#623CE4"/>
+  <text x="60" y="85" text-anchor="middle" font-size="10" fill="white" font-weight="bold">Backend</text>
+  
+  <circle cx="140" cy="80" r="30" fill="#623CE4" opacity="0.2" stroke="#623CE4" stroke-width="3"/>
+  <circle cx="140" cy="80" r="20" fill="#623CE4"/>
+  <text x="140" y="85" text-anchor="middle" font-size="10" fill="white" font-weight="bold">Infra</text>
+  
+  <circle cx="100" cy="140" r="30" fill="#623CE4" opacity="0.2" stroke="#623CE4" stroke-width="3"/>
+  <circle cx="100" cy="140" r="20" fill="#623CE4"/>
+  <text x="100" y="145" text-anchor="middle" font-size="10" fill="white" font-weight="bold">Module</text>
+  
+  <!-- Dependency arrows -->
+  <path d="M 85 80 L 115 80" stroke="#623CE4" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 120 95 L 110 125" stroke="#623CE4" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#623CE4"/>
+    </marker>
+  </defs>
+  
+  <!-- Auto-detection indicator -->
+  <circle cx="170" cy="50" r="15" fill="#28CA42" opacity="0.2"/>
+  <path d="M 163 50 L 167 54 L 177 44" stroke="#28CA42" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+

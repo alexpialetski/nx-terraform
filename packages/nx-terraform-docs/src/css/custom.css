@@ -1,0 +1,30 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* Terraform brand colors - Purple/Indigo theme */
+:root {
+  --ifm-color-primary: #623CE4;
+  --ifm-color-primary-dark: #4F2FC7;
+  --ifm-color-primary-darker: #4A2BB8;
+  --ifm-color-primary-darkest: #3D2397;
+  --ifm-color-primary-light: #7A5AEB;
+  --ifm-color-primary-lighter: #8264ED;
+  --ifm-color-primary-lightest: #A18FF2;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(98, 60, 228, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #7A5AEB;
+  --ifm-color-primary-dark: #6B4FE8;
+  --ifm-color-primary-darker: #6447E6;
+  --ifm-color-primary-darkest: #4F2FC7;
+  --ifm-color-primary-light: #8A6FED;
+  --ifm-color-primary-lighter: #9178EF;
+  --ifm-color-primary-lightest: #A896F2;
+  --docusaurus-highlighted-code-line-bg: rgba(122, 90, 235, 0.2);
+}

@@ -1,0 +1,26 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Terminal/CLI window -->
+  <rect x="30" y="40" width="140" height="120" rx="8" fill="#1E1E1E"/>
+  <rect x="30" y="40" width="140" height="30" rx="8" fill="#2D2D2D"/>
+  
+  <!-- Window controls -->
+  <circle cx="45" cy="55" r="5" fill="#FF5F57"/>
+  <circle cx="65" cy="55" r="5" fill="#FFBD2E"/>
+  <circle cx="85" cy="55" r="5" fill="#28CA42"/>
+  
+  <!-- Terminal prompt -->
+  <text x="40" y="90" font-family="monospace" font-size="14" fill="#623CE4">$ nx run</text>
+  
+  <!-- Command list representing targets -->
+  <rect x="50" y="100" width="100" height="8" rx="2" fill="#623CE4" opacity="0.6"/>
+  <rect x="50" y="115" width="80" height="8" rx="2" fill="#623CE4" opacity="0.6"/>
+  <rect x="50" y="130" width="90" height="8" rx="2" fill="#623CE4" opacity="0.6"/>
+  
+  <!-- Checkmarks indicating automatic creation -->
+  <circle cx="155" cy="104" r="8" fill="#28CA42"/>
+  <path d="M 151 104 L 153 106 L 159 100" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <circle cx="155" cy="119" r="8" fill="#28CA42"/>
+  <path d="M 151 119 L 153 121 L 159 115" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
