@@ -56,13 +56,7 @@ Do you want to perform these actions?
   Enter a value: yes
 ```
 
-### Auto-approve
-
-To skip confirmation (useful for CI/CD):
-
-```bash
-nx run my-project:terraform-apply -- -auto-approve
-```
+The target runs with `-auto-approve` by default (no confirmation prompt). Use `--configuration=<env>` for environment-specific var files when you ran plan with the same configuration.
 
 ### Apply Saved Plan
 
@@ -96,20 +90,19 @@ nx run my-infra:terraform-apply
 nx run my-infra:terraform-apply --configuration=prod
 ```
 
-### Auto-approve (CI/CD)
-
-```bash
-nx run my-infra:terraform-apply --configuration=prod -- -auto-approve
-```
-
 ### Apply Saved Plan
 
-```bash
-# Save plan
-nx run my-infra:terraform-plan -- -out=plan.tfplan
+The default `terraform-plan` target writes the plan to `tfplan`. Apply it with:
 
-# Apply plan
-nx run my-infra:terraform-apply -- plan.tfplan
+```bash
+nx run my-infra:terraform-plan
+nx run my-infra:terraform-apply
+```
+
+To use a custom plan file:
+
+```bash
+nx run my-infra:terraform-apply -- custom.tfplan
 ```
 
 ## Common Use Cases
@@ -127,7 +120,7 @@ nx run my-infra:terraform-apply -- plan.tfplan
 ## Notes
 
 - Always review the plan before applying
-- Use `-auto-approve` carefully, especially in production
+- The target uses `-auto-approve` by default; gate production applies in CI with approval steps
 - Apply operations modify real infrastructure
 - State is updated after successful apply
 - Failed applies may leave infrastructure in partial state

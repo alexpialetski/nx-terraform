@@ -37,9 +37,9 @@ The generator:
 The generator **never overwrites**:
 
 - `metadata['nx-terraform'].projectType: 'backend'` - Explicitly set by the `terraform-backend` generator
-- `metadata['nx-terraform'].backendProject` - Explicitly set by the `terraform-module` generator when creating stateful modules
+- Target metadata (e.g. `terraform-init.metadata.backendProject`) - Set by the `terraform-module` generator or by users for stateful modules
 
-This ensures that user intent is always preserved, and the generator only fills in missing metadata.
+This ensures that user intent is always preserved, and the generator only updates `projectType` in metadata based on backend block detection.
 
 ## When to Use
 
@@ -78,7 +78,6 @@ The generator gracefully handles:
 
 - Projects without `metadata['nx-terraform'].projectType` (skipped - not Terraform projects)
 - Projects with `projectType: 'backend'` (skipped - backend projects are not synced)
-- Projects with `metadata['nx-terraform'].backendProject` set (skipped - explicit backend reference preserved)
 - Projects without `.tf` files (skipped)
 - Parse errors in `.tf` files (continues with next file)
 - File read errors (continues with next project)

@@ -378,12 +378,14 @@ module "security" {
         'terraform-infra': {
           root: appProjectRoot,
           projectType: 'application',
-          targets: {},
-          metadata: {
-            'nx-terraform': {
-              backendProject: 'terraform-setup',
+          targets: {
+            'terraform-init': {
+              metadata: {
+                backendProject: 'terraform-setup',
+              },
             },
           },
+          metadata: {},
         },
       },
       {
@@ -422,12 +424,14 @@ module "security" {
         'terraform-infra': {
           root: appProjectRoot,
           projectType: 'application',
-          targets: {},
-          metadata: {
-            'nx-terraform': {
-              backendProject: 'terraform-setup',
+          targets: {
+            'terraform-init': {
+              metadata: {
+                backendProject: 'terraform-setup',
+              },
             },
           },
+          metadata: {},
         },
         'shared-module': {
           root: moduleProjectRoot,
@@ -474,12 +478,14 @@ module "security" {
         'terraform-infra': {
           root: appProjectRoot,
           projectType: 'application',
-          targets: {},
-          metadata: {
-            'nx-terraform': {
-              backendProject: 'non-existent-backend',
+          targets: {
+            'terraform-init': {
+              metadata: {
+                backendProject: 'non-existent-backend',
+              },
             },
           },
+          metadata: {},
         },
       },
       {

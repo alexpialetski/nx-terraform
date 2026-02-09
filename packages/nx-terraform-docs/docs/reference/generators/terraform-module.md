@@ -22,7 +22,7 @@ nx g nx-terraform:terraform-module my-infra \
 | Option | Type | Required | Default | Description |
 |--------|------|----------|---------|-------------|
 | `name` | string | Yes | - | Name of the Terraform module (positional argument) |
-| `backendProject` | string | No | - | Name of existing backend project to use. When provided, creates a stateful module connected to the backend. The backend type is automatically derived from the backend project's metadata. When omitted, creates a simple standalone module. |
+| `backendProject` | string | No | - | Name of existing backend project to use. When provided, creates a stateful module and sets `targets['terraform-init'].metadata.backendProject`. The backend type is automatically derived from the backend project's metadata. When omitted, creates a simple standalone module. |
 
 ## Module Types
 
@@ -31,7 +31,7 @@ nx g nx-terraform:terraform-module my-infra \
 **Characteristics:**
 - `projectType: 'application'`
 - `metadata['nx-terraform'].projectType: 'module'`
-- No `metadata['nx-terraform'].backendProject`
+- No `terraform-init.metadata.backendProject`
 - No backend configuration
 - Reusable Terraform code without state management
 - Used by other projects via module references
@@ -47,7 +47,7 @@ nx g nx-terraform:terraform-module my-infra \
 **Characteristics:**
 - `projectType: 'application'`
 - `metadata['nx-terraform'].projectType: 'module'`
-- `metadata['nx-terraform'].backendProject` points to backend project
+- `targets['terraform-init'].metadata.backendProject` points to backend project
 - Backend configuration references `backend.config` from backend project
 - Manages its own infrastructure state
 - Full Terraform lifecycle support
@@ -76,7 +76,7 @@ packages/{name}/
 
 ```
 packages/{name}/
-├── project.json              # projectType: 'application', metadata['nx-terraform'].projectType: 'module', metadata['nx-terraform'].backendProject
+├── project.json              # projectType: 'application', metadata['nx-terraform'].projectType: 'module', targets['terraform-init'].metadata.backendProject
 ├── main.tf                   # Infrastructure resources
 ├── backend.tf                 # Backend configuration (s3 or local)
 ├── provider.tf                # Provider requirements
@@ -188,7 +188,7 @@ This ensures proper initialization order.
 
 ## Notes
 
-- `backendType` is automatically derived from the backend project's metadata when `backendProject` is provided
+- `backendType` is automatically derived from the backend project's metadata when `backendProject` option is provided
 - Simple modules don't require a backend project or backend type
 - Stateful modules validate backend project existence and retrieve backend type from metadata
 - Simple modules have stub targets (modules don't have state to manage)

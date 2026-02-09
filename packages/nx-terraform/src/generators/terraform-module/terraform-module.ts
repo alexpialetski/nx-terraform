@@ -19,18 +19,24 @@ export async function terraformModuleGenerator(
 ) {
   const projectRoot = `packages/${options.name}`;
 
-  // Create project configuration
+  // Create project configuration.
+  // backendProject in target metadata (not in options) so nx:run-commands doesn't pass it to terraform CLI.
   const projectConfig: ProjectConfiguration = {
     root: projectRoot,
     projectType: 'application',
     sourceRoot: `${projectRoot}`,
-    targets: {},
+    targets: {
+      ...(options.backendProject && {
+        'terraform-init': {
+          metadata: {
+            backendProject: options.backendProject,
+          },
+        },
+      }),
+    },
     metadata: {
       [PLUGIN_NAME]: {
         projectType: 'module',
-        ...(options.backendProject && {
-          backendProject: options.backendProject,
-        }),
       },
     },
   };

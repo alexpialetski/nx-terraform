@@ -1,5 +1,9 @@
-import { CreateNodesContextV2, ProjectConfiguration } from '@nx/devkit';
-import { readdirSync, readFileSync } from 'fs';
+import {
+  CreateNodesContextV2,
+  CreateNodesResultV2,
+  ProjectConfiguration,
+} from '@nx/devkit';
+import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createNodesV2 } from './createNodes';
 import {
@@ -7,11 +11,11 @@ import {
   getModuleProjectTargets,
   getStatefulProjectTargets,
 } from './inferedTasks';
+import { NxTerraformPluginOptions } from '../types';
 
 // Mock fs operations
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
-  readdirSync: jest.fn(),
   readFileSync: jest.fn(),
 }));
 
@@ -23,7 +27,6 @@ jest.mock('@nx/devkit', () => ({
   },
 }));
 
-const readdirSyncMock = jest.mocked(readdirSync);
 const readFileSyncMock = jest.mocked(readFileSync);
 
 // Common test constants
@@ -45,14 +48,12 @@ interface FileContent {
 }
 
 /**
- * Sets up mocks for readdirSync and readFileSync
+ * Sets up mocks for readFileSync
  */
 function setupFileMocks(
-  siblingFiles: string[],
   projectJson: ProjectConfiguration,
   fileContents: FileContent = {}
 ): void {
-  readdirSyncMock.mockReturnValue(siblingFiles as any);
   readFileSyncMock.mockImplementation((path: string) => {
     const pathStr = path.toString();
     if (pathStr.includes('project.json')) {
@@ -73,26 +74,31 @@ function setupFileMocks(
  */
 async function executeHandler(
   configFilePath: string,
-  context: CreateNodesContextV2
-): Promise<any> {
+  context: CreateNodesContextV2,
+  options: NxTerraformPluginOptions = {}
+): Promise<CreateNodesResultV2> {
   const [_, handler] = createNodesV2;
-  return await handler([configFilePath], {}, context);
+  return await handler([configFilePath], options, context);
 }
+
+/** Projects map from CreateNodesResult (root may be omitted). */
+type ProjectsFromResult = NonNullable<
+  CreateNodesResultV2[number][1]['projects']
+>;
 
 /**
  * Extracts and verifies projects from the result
  * Returns the projects object if found, or null if not found
  */
 function extractProjects(
-  result: any,
+  result: CreateNodesResultV2,
   PROJECT_ROOT: string
-): { projects: any; PROJECT_ROOT: string } | null {
-  const resultAny = result as any;
-  const projects = resultAny.projects;
+): { projects: ProjectsFromResult; PROJECT_ROOT: string } | null {
+  const projects = result[0]?.[1]?.projects;
 
   if (!projects) {
     expect(readFileSyncMock).toHaveBeenCalled();
-    expect(resultAny).toBeDefined();
+    expect(result).toBeDefined();
     return null;
   }
 
@@ -105,9 +111,9 @@ function extractProjects(
  * Verifies that the project targets match the expected targets
  */
 function verifyProjectTargets(
-  projects: any,
+  projects: ProjectsFromResult,
   PROJECT_ROOT: string,
-  expectedTargets: any
+  expectedTargets: NonNullable<ProjectConfiguration['targets']>
 ): void {
   expect(projects[PROJECT_ROOT].targets).toEqual(expectedTargets);
 }
@@ -118,7 +124,7 @@ describe('createNodes', () => {
   });
 
   describe('project discovery', () => {
-    it('should return empty object when no .tf files exist', async () => {
+    it('should return empty object when project has no terraform metadata', async () => {
       const projectJson: ProjectConfiguration = {
         root: PROJECT_ROOT,
         projectType: 'application',
@@ -126,20 +132,19 @@ describe('createNodes', () => {
         metadata: {},
       };
 
-      // Project has no .tf files
-      setupFileMocks(['project.json', 'index.ts'], projectJson);
+      setupFileMocks(projectJson);
 
       const context = createTestContext();
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
-      // When no .tf files exist, createNodesInternal returns {}
+      // When no terraform metadata exists, createNodesInternal returns {}
       expect(result).toBeDefined();
       if ('projects' in result) {
         expect(Object.keys(result.projects || {})).toHaveLength(0);
       }
     });
 
-    it('should create project when project.json exists', async () => {
+    it('should create project when project.json exists with terraform metadata', async () => {
       const projectJson: ProjectConfiguration = {
         root: PROJECT_ROOT,
         projectType: 'application',
@@ -151,7 +156,7 @@ describe('createNodes', () => {
         },
       };
 
-      setupFileMocks(['main.tf', 'project.json'], projectJson);
+      setupFileMocks(projectJson);
 
       const context = createTestContext();
       const result = await executeHandler(CONFIG_FILE_PATH, context);
@@ -170,20 +175,25 @@ describe('createNodes', () => {
   });
 
   describe('application projects', () => {
-    it('should use stateful targets when backendProject metadata exists and prioritize it over backend block detection', async () => {
+    it('should use stateful targets when terraform-init metadata.backendProject is set', async () => {
       const projectJson: ProjectConfiguration = {
         root: PROJECT_ROOT,
         projectType: 'application',
-        targets: {},
+        targets: {
+          'terraform-init': {
+            metadata: {
+              backendProject: 'my-backend',
+            },
+          },
+        },
         metadata: {
           'nx-terraform': {
             projectType: 'module',
-            backendProject: 'my-backend',
           },
         },
       };
 
-      // Include a backend block in files to verify metadata takes priority
+      // Stateful targets come from terraform-init.metadata.backendProject, not from .tf scanning
       const backendTfContent = `
         terraform {
           backend "s3" {
@@ -194,7 +204,7 @@ describe('createNodes', () => {
         }
       `;
 
-      setupFileMocks(['main.tf', 'backend.tf', 'project.json'], projectJson, {
+      setupFileMocks(projectJson, {
         'backend.tf': backendTfContent,
       });
 
@@ -202,8 +212,7 @@ describe('createNodes', () => {
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getStatefulProjectTargets({
-        backendProject: 'my-backend',
-        varFiles: { dev: false, prod: false },
+        init: { backendProject: 'my-backend' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -232,7 +241,7 @@ describe('createNodes', () => {
 
       const mainTfContent = 'resource "aws_s3_bucket" "test" {}';
 
-      setupFileMocks(['main.tf', 'project.json'], projectJson, {
+      setupFileMocks(projectJson, {
         'main.tf': mainTfContent,
       });
 
@@ -240,8 +249,7 @@ describe('createNodes', () => {
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getBackendProjectTargets({
-        backendProject: null,
-        varFiles: { dev: false, prod: false },
+        init: { backendProject: null },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -266,14 +274,13 @@ describe('createNodes', () => {
         },
       };
 
-      setupFileMocks(['main.tf', 'project.json'], projectJson);
+      setupFileMocks(projectJson);
 
       const context = createTestContext();
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getStatefulProjectTargets({
-        backendProject: null,
-        varFiles: { dev: false, prod: false },
+        init: { backendProject: null },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -300,14 +307,13 @@ describe('createNodes', () => {
         },
       };
 
-      setupFileMocks(['main.tf', 'project.json'], projectJson);
+      setupFileMocks(projectJson);
 
       const context = createTestContext();
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getModuleProjectTargets({
-        backendProject: null,
-        varFiles: { dev: false, prod: false },
+        init: { backendProject: null },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -321,123 +327,10 @@ describe('createNodes', () => {
     });
   });
 
-  describe('varFiles detection', () => {
-    it('should detect dev.tfvars file', async () => {
-      const projectJson: ProjectConfiguration = {
-        root: PROJECT_ROOT,
-        projectType: 'application',
-        targets: {},
-        metadata: {
-          'nx-terraform': {
-            projectType: 'backend',
-          },
-        },
-      };
-
-      const mainTfContent = 'resource "aws_s3_bucket" "test" {}';
-
-      // The code checks siblingFiles.includes('tfvars/dev.tfvars')
-      // So we need to include that exact string in the siblingFiles array
-      setupFileMocks(
-        ['main.tf', 'project.json', 'tfvars/dev.tfvars'],
-        projectJson,
-        { 'main.tf': mainTfContent }
-      );
-
-      const context = createTestContext();
-      const result = await executeHandler(CONFIG_FILE_PATH, context);
-
-      const extracted = extractProjects(result, PROJECT_ROOT);
-      if (extracted) {
-        // Verify targets include varFiles configuration
-        const targets = extracted.projects[extracted.PROJECT_ROOT].targets;
-        expect(targets).toBeDefined();
-      }
-    });
-
-    it('should detect both dev and prod tfvars files', async () => {
-      const projectJson: ProjectConfiguration = {
-        root: PROJECT_ROOT,
-        projectType: 'application',
-        targets: {},
-        metadata: {
-          'nx-terraform': {
-            projectType: 'backend',
-          },
-        },
-      };
-
-      const mainTfContent = 'resource "aws_s3_bucket" "test" {}';
-
-      // Include both tfvars files in sibling files
-      setupFileMocks(
-        ['main.tf', 'project.json', 'tfvars/dev.tfvars', 'tfvars/prod.tfvars'],
-        projectJson,
-        { 'main.tf': mainTfContent }
-      );
-
-      const context = createTestContext();
-      const result = await executeHandler(CONFIG_FILE_PATH, context);
-
-      const extracted = extractProjects(result, PROJECT_ROOT);
-      if (extracted) {
-        const targets = extracted.projects[extracted.PROJECT_ROOT].targets;
-        expect(targets).toBeDefined();
-      }
-    });
-
-    it('should not detect varFiles when they do not exist', async () => {
-      const projectJson: ProjectConfiguration = {
-        root: PROJECT_ROOT,
-        projectType: 'application',
-        targets: {},
-        metadata: {
-          'nx-terraform': {
-            projectType: 'backend',
-          },
-        },
-      };
-
-      const mainTfContent = 'resource "aws_s3_bucket" "test" {}';
-
-      setupFileMocks(['main.tf', 'project.json'], projectJson, {
-        'main.tf': mainTfContent,
-      });
-
-      const context = createTestContext();
-      const result = await executeHandler(CONFIG_FILE_PATH, context);
-
-      const extracted = extractProjects(result, PROJECT_ROOT);
-      if (extracted) {
-        const targets = extracted.projects[extracted.PROJECT_ROOT].targets;
-        expect(targets).toBeDefined();
-      }
-    });
-  });
-
   describe('error handling', () => {
-    it('should handle directory read errors gracefully', async () => {
-      const projectJson: ProjectConfiguration = {
-        root: PROJECT_ROOT,
-        projectType: 'application',
-        targets: {},
-        metadata: {
-          'nx-terraform': {
-            projectType: 'module',
-          },
-        },
-      };
-
-      readFileSyncMock.mockImplementation((path: string) => {
-        const pathStr = path.toString();
-        if (pathStr.includes('project.json')) {
-          return Buffer.from(JSON.stringify(projectJson));
-        }
-        throw new Error(`Unexpected file read: ${pathStr}`);
-      });
-
-      readdirSyncMock.mockImplementation(() => {
-        throw new Error('Directory not found');
+    it('should handle project.json read errors gracefully', async () => {
+      readFileSyncMock.mockImplementation(() => {
+        throw new Error('File not found');
       });
 
       const context = createTestContext();
@@ -446,7 +339,7 @@ describe('createNodes', () => {
       // We expect it to handle the error gracefully
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
-      // Should return empty object when directory can't be read
+      // Should return empty object when project.json can't be read
       expect(result).toBeDefined();
       // The result might be empty or contain an error, both are acceptable
     });

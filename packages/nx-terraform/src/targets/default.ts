@@ -5,39 +5,15 @@ import {
   TERRAFORM_ENV_VARIABLES_INPUTS,
   TERRAFORM_FILES_INPUTS,
 } from './inputs';
-import { TargetsConfigurationParams, TerraformTargetDependency } from './type';
-
-const getConfigurations = (
-  varFiles: TargetsConfigurationParams['varFiles'],
-  additionalArgs: string[]
-) => ({
-  defaultConfiguration: 'dev',
-  configurations: {
-    dev: {
-      args: [
-        ...additionalArgs,
-        varFiles.dev ? '-var-file=./tfvars/dev.tfvars' : '',
-      ],
-    },
-    prod: {
-      args: [
-        ...additionalArgs,
-        varFiles.prod ? '-var-file=./tfvars/prod.tfvars' : '',
-      ],
-    },
-  },
-});
+import { TerraformInitTargetOptions, TerraformTargetDependency } from './type';
 
 export const getTerraformInitTarget = (
-  params: TargetsConfigurationParams
+  options: TerraformInitTargetOptions
 ): TargetConfiguration => {
-  const args = [];
+  const args = ['-reconfigure'];
 
-  if (params.backendProject) {
-    args.push(
-      `-backend-config=../${params.backendProject}/backend.config`,
-      '-reconfigure'
-    );
+  if (options.backendProject) {
+    args.push(`-backend-config="../${options.backendProject}/backend.config"`);
   }
 
   return {
@@ -48,6 +24,7 @@ export const getTerraformInitTarget = (
     options: {
       cwd: '{projectRoot}',
       command: 'terraform init',
+      args,
     },
     inputs: [
       '{projectRoot}/provider.tf',
@@ -56,23 +33,19 @@ export const getTerraformInitTarget = (
     ],
     outputs: ['{projectRoot}/.terraform', '{projectRoot}/.terraform.lock.hcl'],
     syncGenerators: ['nx-terraform:sync-terraform-metadata'],
-    ...getConfigurations({ dev: false, prod: false }, args),
   };
 };
 
-export const getTerraformPlanTarget = (
-  params: TargetsConfigurationParams
-): TargetConfiguration => ({
+export const getTerraformPlanTarget = (): TargetConfiguration => ({
   cache: false,
   executor: 'nx:run-commands',
   dependsOn: ['terraform-init' satisfies TerraformTargetDependency],
   options: {
     cwd: '{projectRoot}',
-    command: 'terraform plan',
+    command: 'terraform plan -out=tfplan',
   },
   inputs: [...TERRAFORM_ALL_INPUTS],
   outputs: ['{projectRoot}/tfplan'],
-  ...getConfigurations(params.varFiles, ['-out=tfplan']),
 });
 
 export const TERRAFORM_APPLY_TARGET: TargetConfiguration = {
@@ -86,17 +59,15 @@ export const TERRAFORM_APPLY_TARGET: TargetConfiguration = {
   inputs: [...TERRAFORM_ALL_INPUTS, '{projectRoot}/tfplan'],
 };
 
-export const getTerraformDestroyTarget = (
-  params: TargetsConfigurationParams
-): TargetConfiguration => ({
+export const getTerraformDestroyTarget = (): TargetConfiguration => ({
   cache: false,
   executor: 'nx:run-commands',
   dependsOn: ['terraform-init' satisfies TerraformTargetDependency],
   options: {
     cwd: '{projectRoot}',
     command: 'terraform destroy',
+    args: ['-auto-approve'],
   },
-  ...getConfigurations(params.varFiles, ['-auto-approve']),
 });
 
 export const TERRAFORM_FMT_TARGET: TargetConfiguration = {

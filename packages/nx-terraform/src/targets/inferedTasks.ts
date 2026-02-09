@@ -16,12 +16,12 @@ export const getBackendProjectTargets = (
   params: TargetsConfigurationParams
 ): TerraformProjectTargets => ({
   'terraform-init': {
-    ...getTerraformInitTarget(params),
+    ...getTerraformInitTarget(params.init),
     cache: true,
   },
-  'terraform-plan': { ...getTerraformPlanTarget(params), cache: true },
+  'terraform-plan': { ...getTerraformPlanTarget(), cache: true },
   'terraform-apply': { ...TERRAFORM_APPLY_TARGET, cache: true },
-  'terraform-destroy': getTerraformDestroyTarget(params),
+  'terraform-destroy': getTerraformDestroyTarget(),
   'terraform-fmt': TERRAFORM_FMT_TARGET,
   'terraform-validate': TERRAFORM_VALIDATE_TARGET,
   'terraform-output': TERRAFORM_OUTPUT_TARGET,
@@ -30,10 +30,10 @@ export const getBackendProjectTargets = (
 export const getStatefulProjectTargets = (
   params: TargetsConfigurationParams
 ): TerraformProjectTargets => ({
-  'terraform-init': getTerraformInitTarget(params),
-  'terraform-plan': getTerraformPlanTarget(params),
+  'terraform-init': getTerraformInitTarget(params.init),
+  'terraform-plan': getTerraformPlanTarget(),
   'terraform-apply': TERRAFORM_APPLY_TARGET,
-  'terraform-destroy': getTerraformDestroyTarget(params),
+  'terraform-destroy': getTerraformDestroyTarget(),
   'terraform-fmt': TERRAFORM_FMT_TARGET,
   'terraform-validate': TERRAFORM_VALIDATE_TARGET,
   'terraform-output': TERRAFORM_OUTPUT_TARGET,
@@ -52,10 +52,10 @@ export const getModuleProjectTargets = (
   });
 
   return {
-    'terraform-init': getStubTarget(getTerraformInitTarget(params)),
-    'terraform-plan': getStubTarget(getTerraformPlanTarget(params)),
+    'terraform-init': getStubTarget(getTerraformInitTarget(params.init)),
+    'terraform-plan': getStubTarget(getTerraformPlanTarget()),
     'terraform-apply': getStubTarget(TERRAFORM_APPLY_TARGET),
-    'terraform-destroy': getStubTarget(getTerraformDestroyTarget(params)),
+    'terraform-destroy': getStubTarget(getTerraformDestroyTarget()),
     'terraform-fmt': TERRAFORM_FMT_TARGET,
     'terraform-validate': TERRAFORM_VALIDATE_TARGET,
     'terraform-output': getStubTarget(TERRAFORM_OUTPUT_TARGET),

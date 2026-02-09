@@ -31,8 +31,6 @@ const sidebars: SidebarsConfig = {
         'tutorials/tutorial-01-create-workspace',
         'tutorials/tutorial-02-setup-backend',
         'tutorials/tutorial-03-first-module',
-        'tutorials/tutorial-04-multiple-environments',
-        'tutorials/tutorial-05-reusable-modules',
       ],
     },
       {
@@ -45,8 +43,11 @@ const sidebars: SidebarsConfig = {
         'guides/caching',
         'guides/project-discovery',
         'guides/configuration',
+        'guides/ci-cd',
+        'guides/migration',
         'guides/troubleshooting',
         'guides/best-practices',
+        'guides/faq',
       ],
     },
     {

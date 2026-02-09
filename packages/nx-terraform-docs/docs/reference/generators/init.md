@@ -62,6 +62,10 @@ After running the generator, check `nx.json`:
 }
 ```
 
+### Configuring Target Arguments
+
+You can override target arguments in individual `project.json` files using `options.args` and `configurations`. See the [Configuration guide](/docs/guides/configuration) for examples of using `args` with `-var-file` for different environments.
+
 ## When to Use
 
 - **Adding Terraform support** to an existing Nx workspace
@@ -77,6 +81,5 @@ After running the generator, check `nx.json`:
 ## Notes
 
 - This generator is automatically invoked by the `preset` generator
-- The plugin registration enables automatic discovery of Terraform projects via `**/main.tf` pattern
-- Once registered, the plugin will automatically create Terraform targets for discovered projects
+- The plugin registration enables automatic discovery of Terraform projects: the plugin scans `**/project.json` and creates Terraform targets for projects that have `metadata['nx-terraform'].projectType` set (use the generators to create projects with this metadata)
 

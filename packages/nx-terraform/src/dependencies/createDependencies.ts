@@ -11,7 +11,6 @@ import {
   validateAndAddDependency,
   isLocalPath,
 } from './utils';
-import { PLUGIN_NAME } from '../constants';
 
 /**
  * Creates dependencies between Terraform projects by:
@@ -26,9 +25,13 @@ export const createDependencies: CreateDependencies<
   for (const [projectName, projectConfig] of Object.entries(ctx.projects)) {
     // ----------------------------------------------------------------
     // Static dependencies from projects to their backend projects
+    // (read from terraform-init target's metadata.backendProject)
     // ----------------------------------------------------------------
-    const backendProject =
-      projectConfig.metadata?.[PLUGIN_NAME]?.backendProject;
+    const initTarget = projectConfig.targets?.['terraform-init'];
+    const initMetadata = initTarget?.metadata as
+      | { backendProject?: string }
+      | undefined;
+    const backendProject = initMetadata?.backendProject;
 
     if (backendProject) {
       // Verify backend project exists

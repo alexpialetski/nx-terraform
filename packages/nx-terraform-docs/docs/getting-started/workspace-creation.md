@@ -71,7 +71,7 @@ my-terraform-workspace/
     │   ├── variables.tf
     │   └── backend.config    # Generated after first apply
     └── terraform-infra/      # Initial Terraform stateful module
-        ├── project.json      # Contains metadata['nx-terraform'].backendProject: 'terraform-setup'
+        ├── project.json      # Contains targets['terraform-init'].metadata.backendProject: 'terraform-setup'
         ├── main.tf
         ├── backend.tf        # References terraform-setup backend
         ├── provider.tf

@@ -29,11 +29,33 @@ The `terraform-destroy` target destroys all infrastructure resources managed by 
 
 ## Configurations
 
-Supports environment-specific configurations via `tfvars` files:
+Supports environment-specific configurations via `args` array. Configure in your `project.json`:
+
+```json
+{
+  "targets": {
+    "terraform-destroy": {
+      "options": {
+        "args": ["-var-file=tfvars/dev.tfvars"]
+      },
+      "configurations": {
+        "prod": {
+          "args": ["-var-file=tfvars/prod.tfvars"]
+        }
+      }
+    }
+  }
+}
+```
+
+Paths in `-var-file` are relative to the project root (where the command runs). Then use configurations:
 
 ```bash
 # Uses tfvars/dev.tfvars
-nx run my-project:terraform-destroy --configuration=dev
+nx run my-project:terraform-destroy
+
+# Uses tfvars/prod.tfvars
+nx run my-project:terraform-destroy --configuration=prod
 ```
 
 ## Behavior
@@ -50,13 +72,7 @@ Do you really want to destroy all resources?
   Enter a value: yes
 ```
 
-### Auto-approve
-
-To skip confirmation:
-
-```bash
-nx run my-project:terraform-destroy -- -auto-approve
-```
+The target runs with `-auto-approve` by default (no confirmation prompt). Use `--configuration=<env>` for environment-specific var files.
 
 ### Targeted Destruction
 
@@ -84,12 +100,6 @@ nx run my-infra:terraform-destroy
 nx run my-infra:terraform-destroy --configuration=dev
 ```
 
-### Auto-approve
-
-```bash
-nx run my-infra:terraform-destroy -- -auto-approve
-```
-
 ### Targeted Destroy
 
 ```bash
@@ -112,11 +122,12 @@ nx run my-infra:terraform-destroy -- -target=aws_instance.example
 
 :::warning
 Destroy operations are **irreversible**. Always:
+
 - Review what will be destroyed
 - Backup important data
 - Use with caution in production
 - Consider targeted destruction for specific resources
-:::
+  :::
 
 ## Notes
 
@@ -125,4 +136,3 @@ Destroy operations are **irreversible**. Always:
 - Use `-target` to destroy specific resources
 - State is updated after successful destroy
 - Failed destroys may leave infrastructure in partial state
-
