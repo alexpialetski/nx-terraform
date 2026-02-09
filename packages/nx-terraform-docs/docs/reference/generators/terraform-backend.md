@@ -109,7 +109,7 @@ nx g nx-terraform:terraform-backend shared-backend --backendType=aws-s3
 nx run shared-backend:terraform-apply
 
 # 4. Backend.config is now available for other projects
-# Other projects can reference this backend via metadata['nx-terraform'].backendProject
+# Other projects can reference this backend via targets['terraform-init'].backendProject
 ```
 
 ## Backend Configuration File
@@ -135,12 +135,12 @@ terraform init -backend-config=../{backend-project}/backend.config
 
 ## Integration with Other Projects
 
-Backend projects are referenced by stateful Terraform modules via `metadata['nx-terraform'].backendProject` in their `project.json`:
+Backend projects are referenced by stateful Terraform modules via the **terraform-init target options** in their `project.json`:
 
 ```json
 {
-  "metadata": {
-    "nx-terraform": {
+  "targets": {
+    "terraform-init": {
       "backendProject": "shared-backend"
     }
   }
@@ -166,7 +166,7 @@ This allows stateful modules to automatically use the backend configuration duri
 ## Notes
 
 - Backend projects have `projectType: 'application'` with `metadata['nx-terraform'].projectType: 'backend'`
-- Backend projects do not have `metadata['nx-terraform'].backendProject` (they are the backend, not consumers of it)
+- Backend projects do not set `terraform-init.metadata.backendProject` (they are the backend, not consumers of it)
 - The plugin automatically infers Terraform targets for backend projects
 - Backend projects must be applied before stateful projects can use them
 - The `backend.config` file is generated as part of the backend project's Terraform output

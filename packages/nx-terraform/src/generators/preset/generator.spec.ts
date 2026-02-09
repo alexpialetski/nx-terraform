@@ -24,7 +24,10 @@ describe('preset generator', () => {
     expect(infraConfig).toBeDefined();
     expect(infraConfig.projectType).toBe('application');
     expect(infraConfig.metadata?.['nx-terraform']?.projectType).toBe('module');
-    expect(infraConfig.metadata?.['nx-terraform']?.backendProject).toBe('terraform-setup');
+    expect(
+      (infraConfig.targets?.['terraform-init']?.metadata as { backendProject?: string })
+        ?.backendProject
+    ).toBe('terraform-setup');
 
     expect(readNxJson(tree).plugins).toEqual(
       expect.arrayContaining([
@@ -52,7 +55,7 @@ describe('preset generator', () => {
     expect(infraConfig).toBeDefined();
     expect(infraConfig.projectType).toBe('application');
     expect(infraConfig.metadata?.['nx-terraform']?.projectType).toBe('module');
-    expect(infraConfig.metadata?.['nx-terraform']?.backendProject).toBeUndefined();
+    expect(infraConfig.targets?.['terraform-init']).toBeUndefined();
 
     expect(readNxJson(tree).plugins).toEqual(
       expect.arrayContaining([

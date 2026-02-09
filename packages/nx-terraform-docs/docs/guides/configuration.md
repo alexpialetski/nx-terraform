@@ -58,6 +58,7 @@ variable "instance_type" {
 Create environment-specific values:
 
 **dev.tfvars:**
+
 ```hcl
 environment    = "dev"
 instance_count = 1
@@ -65,6 +66,7 @@ instance_type  = "t3.micro"
 ```
 
 **prod.tfvars:**
+
 ```hcl
 environment    = "prod"
 instance_count = 3
@@ -73,18 +75,38 @@ instance_type  = "t3.large"
 
 ### Using Configurations
 
-Use configurations with targets:
+You can pass different var files per environment using Nx configurations in your `project.json` by overriding the `args` array:
 
-```bash
-# Plan with dev configuration
-nx run my-infra:terraform-plan --configuration=dev
-
-# Apply with prod configuration
-nx run my-infra:terraform-apply --configuration=prod
+```json
+{
+  "targets": {
+    "terraform-plan": {
+      "options": {
+        "args": ["-var-file=tfvars/dev.tfvars"]
+      },
+      "configurations": {
+        "prod": {
+          "args": ["-var-file=tfvars/prod.tfvars"]
+        }
+      }
+    }
+  }
+}
 ```
 
-The plugin automatically uses the appropriate `tfvars` file:
-- `--configuration=dev` → uses `tfvars/dev.tfvars`
+Paths in `-var-file` are relative to the project root (where the command runs). Then use configurations with targets:
+
+```bash
+# Plan with dev configuration (default)
+nx run my-infra:terraform-plan
+
+# Plan with prod configuration
+nx run my-infra:terraform-plan --configuration=prod
+```
+
+The configurations override the `args` to use different var files:
+
+- Default → uses `tfvars/dev.tfvars`
 - `--configuration=prod` → uses `tfvars/prod.tfvars`
 
 ## Backend Configuration
@@ -151,11 +173,11 @@ terraform {
 }
 ```
 
-## Project Metadata
+## Project Metadata and Target Options
 
-### Backend Project Metadata
+### Backend Project
 
-Backend projects have no `backendProject` metadata:
+Backend projects do not set `terraform-init.metadata.backendProject` (they are the backend themselves). They have no `terraform-init` target metadata for backend:
 
 ```json
 {
@@ -164,17 +186,22 @@ Backend projects have no `backendProject` metadata:
 }
 ```
 
-### Stateful Project Metadata
+### Stateful Project
 
-Stateful projects reference their backend:
+Stateful projects reference their backend via **terraform-init target metadata**:
 
 ```json
 {
   "root": "packages/my-infra",
   "projectType": "application",
+  "targets": {
+    "terraform-init": {
+      "metadata": { "backendProject": "terraform-setup" }
+    }
+  },
   "metadata": {
     "nx-terraform": {
-      "backendProject": "terraform-setup"
+      "projectType": "stateful"
     }
   }
 }
@@ -182,12 +209,15 @@ Stateful projects reference their backend:
 
 ### Module Project Metadata
 
-Module projects are libraries:
+Module projects have `metadata['nx-terraform'].projectType: 'module'`:
 
 ```json
 {
   "root": "packages/networking",
-  "projectType": "library"
+  "projectType": "application",
+  "metadata": {
+    "nx-terraform": { "projectType": "module" }
+  }
 }
 ```
 
@@ -195,11 +225,30 @@ Module projects are libraries:
 
 ### Configuration Support
 
-Targets support configurations via `-var-file`:
+Targets support configurations by overriding the `args` array to pass different `-var-file` arguments:
+
+```json
+{
+  "targets": {
+    "terraform-plan": {
+      "options": {
+        "args": ["-var-file=tfvars/dev.tfvars"]
+      },
+      "configurations": {
+        "prod": {
+          "args": ["-var-file=tfvars/prod.tfvars"]
+        }
+      }
+    }
+  }
+}
+```
+
+Use configurations with targets:
 
 ```bash
 # Uses tfvars/dev.tfvars
-nx run my-infra:terraform-plan --configuration=dev
+nx run my-infra:terraform-plan
 
 # Uses tfvars/prod.tfvars
 nx run my-infra:terraform-plan --configuration=prod
@@ -208,18 +257,37 @@ nx run my-infra:terraform-plan --configuration=prod
 ### Supported Targets
 
 These targets support configurations:
+
 - `terraform-plan`
-- `terraform-apply`
 - `terraform-destroy`
 
-### Configuration Files
+Note: `terraform-apply` uses the plan file from `terraform-plan`, so it doesn't need a var file argument.
 
-The plugin looks for:
-- `tfvars/{configuration}.tfvars`
+### Configuration Pattern
 
-Example:
-- `--configuration=dev` → `tfvars/dev.tfvars`
-- `--configuration=prod` → `tfvars/prod.tfvars`
+The recommended pattern is to override `args` in your `project.json` target configurations for different environments:
+
+Example `project.json`:
+
+```json
+{
+  "targets": {
+    "terraform-plan": {
+      "options": {
+        "args": ["-var-file=tfvars/dev.tfvars"]
+      },
+      "configurations": {
+        "prod": {
+          "args": ["-var-file=tfvars/prod.tfvars"]
+        },
+        "staging": {
+          "args": ["-var-file=tfvars/staging.tfvars"]
+        }
+      }
+    }
+  }
+}
+```
 
 ## Environment Variables
 
@@ -260,31 +328,18 @@ Main project configuration:
   "sourceRoot": "packages/my-infra",
   "projectType": "application",
   "targets": {
-    "terraform-init": { ... },
+    "terraform-init": { "metadata": { "backendProject": "terraform-setup" }, ... },
     "terraform-plan": { ... }
   },
   "metadata": {
     "nx-terraform": {
-      "backendProject": "terraform-setup"
+      "projectType": "module"
     }
   }
 }
 ```
 
-### nx.json
-
-Workspace configuration:
-
-```json
-{
-  "plugins": [
-    {
-      "plugin": "nx-terraform",
-      "options": {}
-    }
-  ]
-}
-```
+Individual projects can override the default command arguments by defining their own `args` in target configurations.
 
 ## Configuration Best Practices
 
@@ -366,5 +421,4 @@ For configuration issues, see the [Troubleshooting Guide](/docs/guides/troublesh
 
 - [Backend Types](/docs/guides/backend-types) - Learn about backend configuration
 - [Project Types](/docs/guides/project-types) - Understand project metadata
-- [Tutorial 4: Multiple Environments](/docs/tutorials/tutorial-04-multiple-environments) - Practical configuration examples
-
+- [Multiple Environments Example](/docs/examples/multiple-environments) - Practical configuration examples

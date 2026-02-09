@@ -20,7 +20,7 @@ describe('terraform-module generator', () => {
       expect(config.name).toEqual(simpleModuleOptions.name);
       expect(config.projectType).toEqual('application');
       expect(config.metadata?.['nx-terraform']?.projectType).toEqual('module');
-      expect(config.metadata?.['nx-terraform']?.backendProject).toBeUndefined();
+      expect(config.targets?.['terraform-init']).toBeUndefined();
       expect(config.implicitDependencies).toBeUndefined();
     });
 
@@ -121,9 +121,10 @@ describe('terraform-module generator', () => {
       expect(config.name).toEqual(statefulModuleOptions.name);
       expect(config.projectType).toEqual('application');
       expect(config.metadata?.['nx-terraform']?.projectType).toEqual('module');
-      expect(config.metadata?.['nx-terraform']?.backendProject).toEqual(
-        backendName
-      );
+      expect(
+        (config.targets?.['terraform-init']?.metadata as { backendProject?: string })
+          ?.backendProject
+      ).toEqual(backendName);
       // Note: implicitDependencies are now created by createDependencies API
       expect(config.implicitDependencies).toBeUndefined();
     });

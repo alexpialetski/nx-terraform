@@ -4,7 +4,7 @@ import {
   ProjectConfiguration,
   createNodesFromFiles,
 } from '@nx/devkit';
-import { readdirSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import {
   getBackendProjectTargets,
@@ -12,6 +12,7 @@ import {
   getStatefulProjectTargets,
   type TargetsConfigurationParams,
 } from './inferedTasks';
+import type { TerraformInitTargetMetadata } from './type';
 import { NxTerraformPluginOptions } from '../types';
 import { PLUGIN_NAME } from '../constants';
 
@@ -59,32 +60,15 @@ async function createNodesInternal(
     return {};
   }
 
-  // Read directory to check for tfvars files
-  let siblingFiles: string[];
-  try {
-    siblingFiles = readdirSync(join(context.workspaceRoot, projectRoot));
-  } catch {
-    // If directory can't be read, skip this project
-    return {};
-  }
-
-  const targetConfigurationParams: TargetsConfigurationParams = {
-    backendProject:
-      projectJsonContent.metadata?.[PLUGIN_NAME]?.backendProject || null,
-    // check if projectRoot/tfvars/dev.tfvars and projectRoot/tfvars/prod.tfvars exist
-    varFiles: {
-      dev: siblingFiles.includes('tfvars/dev.tfvars'),
-      prod: siblingFiles.includes('tfvars/prod.tfvars'),
-    },
-  };
+  const targetConfigurationParams = normalizeTargetOptions(projectJsonContent);
 
   let projectTargets: ProjectConfiguration['targets'] = {};
 
   // Determine targets based on metadata (no fallback scanning needed)
   if (terraformProjectType === 'backend') {
     projectTargets = getBackendProjectTargets(targetConfigurationParams);
-  } else if (targetConfigurationParams.backendProject) {
-    // If backendProject metadata exists, it's a stateful module
+  } else if (targetConfigurationParams.init.backendProject) {
+    // If backendProject option is set, it's a stateful module
     projectTargets = getStatefulProjectTargets(targetConfigurationParams);
   } else if (terraformProjectType === 'stateful') {
     // If terraformProjectType is explicitly 'stateful', use stateful targets
@@ -100,6 +84,24 @@ async function createNodesInternal(
       [projectRoot]: {
         targets: projectTargets,
       },
+    },
+  };
+}
+
+/**
+ * Normalizes project.json into params for building Terraform targets.
+ * backendProject is read from terraform-init target's metadata; varFile is via target args/configurations.
+ */
+function normalizeTargetOptions(
+  projectJsonContent: ProjectConfiguration
+): TargetsConfigurationParams {
+  const initTarget = projectJsonContent.targets?.['terraform-init'];
+  const metadata = initTarget?.metadata as TerraformInitTargetMetadata | undefined;
+  const backendProject = metadata?.backendProject ?? null;
+
+  return {
+    init: {
+      backendProject,
     },
   };
 }

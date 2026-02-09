@@ -66,17 +66,10 @@ export async function syncTerraformMetadataGenerator(
       // Determine hasBackend from collected backends
       const hasBackend = projectState.backends.length > 0;
 
-      const currentBackendProject =
-        projectConfig.metadata?.[PLUGIN_NAME]?.backendProject;
-
-      // Determine updates needed based on collected state
-      // Only update project type if:
-      // 1. Project type is 'module' or 'stateful' (not 'backend')
-      // 2. No backendProject is set (backendProject takes precedence)
+      // Only update project type for module/stateful projects (not backend)
       if (
-        !currentBackendProject &&
-        (nxTerraformProjectMetadata.projectType === 'module' ||
-          nxTerraformProjectMetadata.projectType === 'stateful')
+        nxTerraformProjectMetadata.projectType === 'module' ||
+        nxTerraformProjectMetadata.projectType === 'stateful'
       ) {
         const expectedTerraformProjectType = hasBackend ? 'stateful' : 'module';
         if (

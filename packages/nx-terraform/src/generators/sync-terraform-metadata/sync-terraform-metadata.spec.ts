@@ -116,25 +116,30 @@ describe('sync-terraform-metadata generator', () => {
     expect(config.metadata?.['nx-terraform']?.backendType).toBe('aws-s3');
   });
 
-  it('should preserve existing backendProject metadata', async () => {
+  it('should preserve projectType module when no backend block (terraform-init.metadata.backendProject unchanged)', async () => {
     const tree = createTreeWithEmptyWorkspace();
     const projectName = 'my-stateful-project';
     const projectRoot = `packages/${projectName}`;
 
-    // Create project with backendProject metadata
+    // Create project with terraform-init.metadata.backendProject (not in options, so not passed to CLI)
     addProjectConfiguration(tree, projectName, {
       root: projectRoot,
       projectType: 'application',
-      targets: {},
+      targets: {
+        'terraform-init': {
+          metadata: {
+            backendProject: 'my-backend',
+          },
+        },
+      },
       metadata: {
         'nx-terraform': {
           projectType: 'module',
-          backendProject: 'my-backend',
         },
       },
     });
 
-    // Create .tf file without backend block (should not change metadata)
+    // Create .tf file without backend block (projectType stays module)
     tree.write(
       `${projectRoot}/main.tf`,
       `
@@ -146,9 +151,10 @@ describe('sync-terraform-metadata generator', () => {
 
     const config = readProjectConfiguration(tree, projectName);
     expect(config.metadata?.['nx-terraform']?.projectType).toBe('module');
-    expect(config.metadata?.['nx-terraform']?.backendProject).toBe(
-      'my-backend'
-    );
+    expect(
+      (config.targets?.['terraform-init']?.metadata as { backendProject?: string })
+        ?.backendProject
+    ).toBe('my-backend');
   });
 
   it('should skip projects without terraformProjectType', async () => {

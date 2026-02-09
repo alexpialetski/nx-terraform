@@ -9,17 +9,18 @@ The nx-terraform plugin supports three types of Terraform projects, each with di
 ## Overview
 
 Terraform projects in nx-terraform are classified based on:
-- **Project Type**: `application` or `library` (from `project.json`)
-- **Backend Configuration**: Presence of `backendProject` metadata
-- **State Management**: Whether the project manages state
+- **Metadata**: `metadata['nx-terraform'].projectType` in `project.json` (`backend`, `stateful`, or `module`)
+- **Backend configuration**: Presence of `targets['terraform-init'].metadata.backendProject`
+- **State management**: Whether the project manages state
+
+All Terraform projects use `projectType: 'application'` in `project.json`; the plugin uses `metadata['nx-terraform'].projectType` to distinguish backend, stateful, and module behavior.
 
 ```mermaid
 graph TD
-    A[Terraform Project] --> B{Project Type?}
-    B -->|application| C{Has backendProject?}
-    B -->|library| D[Module Project]
-    C -->|No| E[Backend Project]
-    C -->|Yes| F[Stateful Project]
+    A[Terraform Project] --> B{metadata.projectType?}
+    B -->|backend| E[Backend Project]
+    B -->|stateful or backendProject set| F[Stateful Project]
+    B -->|module| D[Module Project]
     
     E --> E1[Manages State Storage]
     E --> E2[Generates backend.config]
@@ -38,7 +39,8 @@ Backend projects manage the remote state storage infrastructure itself.
 ### Characteristics
 
 - **Project Type**: `application`
-- **Backend Metadata**: No `backendProject` in metadata (it's a backend itself)
+- **Metadata**: `metadata['nx-terraform'].projectType: 'backend'`
+- **Backend config**: No `terraform-init.metadata.backendProject` (it's a backend itself)
 - **State Management**: Manages its own state (typically local, even for remote backends)
 - **Purpose**: Creates and manages state storage (S3 bucket, DynamoDB table, etc.)
 - **Output**: Generates `backend.config` file for other projects to use
@@ -49,6 +51,9 @@ Backend projects manage the remote state storage infrastructure itself.
 {
   "root": "packages/terraform-setup",
   "projectType": "application",
+  "metadata": {
+    "nx-terraform": { "projectType": "backend" }
+  },
   "targets": {
     "terraform-init": { ... },
     "terraform-apply": { ... }
@@ -77,7 +82,8 @@ Stateful projects are infrastructure projects that use remote state storage.
 ### Characteristics
 
 - **Project Type**: `application`
-- **Backend Metadata**: Has `backendProject` in metadata pointing to a backend project
+- **Metadata**: `metadata['nx-terraform'].projectType: 'stateful'` (or `module` with backendProject set)
+- **Backend config**: Has `targets['terraform-init'].metadata.backendProject` pointing to a backend project
 - **State Management**: Uses remote state via the backend project
 - **Purpose**: Deploys actual infrastructure (servers, networks, databases, etc.)
 - **State Location**: Stored in the backend (S3, local file, etc.)
@@ -88,17 +94,18 @@ Stateful projects are infrastructure projects that use remote state storage.
 {
   "root": "packages/my-infra",
   "projectType": "application",
-  "metadata": {
-    "nx-terraform": {
-      "backendProject": "terraform-setup"
+  "targets": {
+    "terraform-init": {
+      "metadata": { "backendProject": "terraform-setup" }
     }
   },
-  "targets": {
-    "terraform-init": { ... },
-    "terraform-apply": { ... }
+  "metadata": {
+    "nx-terraform": { "projectType": "stateful" }
   }
 }
 ```
+
+(Additional Terraform targets are inferred by the plugin.)
 
 ### Use Cases
 
@@ -126,24 +133,28 @@ terraform {
 }
 ```
 
-## Module Projects (Library)
+## Module Projects
 
 Module projects are reusable Terraform modules without state management.
 
 ### Characteristics
 
-- **Project Type**: `library`
-- **Backend Metadata**: No `backendProject` (modules don't have state)
-- **State Management**: None (modules are included in other projects)
+- **Project Type**: `application` (in `project.json`)
+- **Metadata**: `metadata['nx-terraform'].projectType: 'module'`
+- **Backend metadata**: No `terraform-init.metadata.backendProject` (modules don't have state)
+- **State management**: None (modules are included in other projects)
 - **Purpose**: Reusable Terraform code that can be referenced by other projects
-- **Execution**: Validated and formatted, but not applied independently
+- **Execution**: Validated and formatted, but not applied independently (stub targets)
 
 ### Example Configuration
 
 ```json
 {
   "root": "packages/networking",
-  "projectType": "library",
+  "projectType": "application",
+  "metadata": {
+    "nx-terraform": { "projectType": "module" }
+  },
   "targets": {
     "terraform-validate": { ... },
     "terraform-fmt": { ... }
@@ -179,12 +190,13 @@ module "networking" {
 
 | Feature | Backend Project | Stateful Project | Module Project |
 |---------|----------------|------------------|----------------|
-| **Project Type** | `application` | `application` | `library` |
-| **Has Backend** | No (is backend) | Yes (via metadata) | No |
+| **projectType** | `application` | `application` | `application` |
+| **metadata.projectType** | `backend` | `stateful` | `module` |
+| **Has Backend** | No (is backend) | Yes (via backendProject) | No |
 | **Manages State** | Yes (own state) | Yes (remote state) | No |
-| **Can Be Applied** | Yes | Yes | No (included in others) |
+| **Can Be Applied** | Yes | Yes | No (stub; included in others) |
 | **Generates backend.config** | Yes | No | No |
-| **Caching (init/plan/apply)** | Enabled | Disabled | N/A |
+| **Caching (init/plan/apply)** | Enabled | Disabled | N/A (stubs) |
 | **Use Case** | State storage | Infrastructure | Reusable code |
 
 ## Choosing the Right Type
@@ -225,7 +237,7 @@ packages/terraform-setup/
 
 ```
 packages/my-infra/
-├── project.json          # application, backendProject: "terraform-setup"
+├── project.json          # application, terraform-init.metadata.backendProject: "terraform-setup"
 ├── main.tf              # Infrastructure code
 ├── backend.tf          # References backend project
 ├── provider.tf
@@ -240,7 +252,7 @@ packages/my-infra/
 
 ```
 packages/networking/
-├── project.json          # library
+├── project.json          # application + metadata['nx-terraform'].projectType: 'module'
 ├── main.tf              # Module code
 ├── variables.tf         # Module inputs
 ├── outputs.tf           # Module outputs
@@ -251,19 +263,19 @@ packages/networking/
 
 ### Converting Module to Stateful
 
-To convert a library module to a stateful project:
+To convert a module to a stateful project:
 
-1. Change `projectType` from `library` to `application`
-2. Add `backendProject` metadata
+1. Set `metadata['nx-terraform'].projectType` to `stateful`
+2. Add `targets['terraform-init'].metadata.backendProject` pointing to your backend project
 3. Add `backend.tf` file
-4. Update project structure
+4. Update project structure as needed
 
 ### Converting Stateful to Module
 
 To convert a stateful project to a module:
 
-1. Change `projectType` from `application` to `library`
-2. Remove `backendProject` metadata
+1. Set `metadata['nx-terraform'].projectType` to `module`
+2. Remove `targets['terraform-init'].metadata.backendProject` (or the whole terraform-init metadata)
 3. Remove `backend.tf` file
 4. Ensure it's designed for reuse
 

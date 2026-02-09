@@ -30,11 +30,30 @@ The `terraform-plan` target creates an execution plan that shows:
 
 ## Configurations
 
-Supports environment-specific configurations via `tfvars` files:
+Supports environment-specific configurations via `args` array. Configure in your `project.json`:
+
+```json
+{
+  "targets": {
+    "terraform-plan": {
+      "options": {
+        "args": ["-var-file=tfvars/dev.tfvars"]
+      },
+      "configurations": {
+        "prod": {
+          "args": ["-var-file=tfvars/prod.tfvars"]
+        }
+      }
+    }
+  }
+}
+```
+
+Paths in `-var-file` are relative to the project root (where the command runs). Then use configurations:
 
 ```bash
 # Uses tfvars/dev.tfvars
-nx run my-project:terraform-plan --configuration=dev
+nx run my-project:terraform-plan
 
 # Uses tfvars/prod.tfvars
 nx run my-project:terraform-plan --configuration=prod
@@ -45,6 +64,7 @@ nx run my-project:terraform-plan --configuration=prod
 ### Plan Output
 
 The plan shows:
+
 - **+** (green): Resources to be created
 - **~** (yellow): Resources to be modified
 - **-** (red): Resources to be destroyed
@@ -52,17 +72,7 @@ The plan shows:
 
 ### Plan File
 
-You can save the plan to a file:
-
-```bash
-nx run my-project:terraform-plan -- -out=plan.tfplan
-```
-
-Then apply the saved plan:
-
-```bash
-nx run my-project:terraform-apply -- plan.tfplan
-```
+The target saves the plan to `tfplan` by default. Run `terraform-apply` to apply it (no extra arguments needed).
 
 ## Caching
 
@@ -82,12 +92,6 @@ nx run my-infra:terraform-plan
 
 ```bash
 nx run my-infra:terraform-plan --configuration=dev
-```
-
-### Plan with Output File
-
-```bash
-nx run my-infra:terraform-plan -- -out=plan.tfplan
 ```
 
 ### Plan for Specific Resource
@@ -114,4 +118,3 @@ nx run my-infra:terraform-plan -- -target=aws_instance.example
 - Plans can be saved and applied later
 - Plans show detailed change information
 - Use `-refresh=false` to skip state refresh if needed
-

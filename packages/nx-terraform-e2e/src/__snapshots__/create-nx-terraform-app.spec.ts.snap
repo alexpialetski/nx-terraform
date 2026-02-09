@@ -71,26 +71,15 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
     },
     "terraform-destroy": {
       "cache": false,
-      "configurations": {
-        "dev": {
-          "args": [
-            "-auto-approve",
-            "",
-          ],
-        },
-        "prod": {
-          "args": [
-            "-auto-approve",
-            "",
-          ],
-        },
-      },
-      "defaultConfiguration": "dev",
+      "configurations": {},
       "dependsOn": [
         "terraform-init",
       ],
       "executor": "nx:run-commands",
       "options": {
+        "args": [
+          "-auto-approve",
+        ],
         "command": "terraform destroy",
         "cwd": "packages/terraform-setup",
       },
@@ -114,19 +103,7 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
     },
     "terraform-init": {
       "cache": true,
-      "configurations": {
-        "dev": {
-          "args": [
-            "",
-          ],
-        },
-        "prod": {
-          "args": [
-            "",
-          ],
-        },
-      },
-      "defaultConfiguration": "dev",
+      "configurations": {},
       "dependsOn": [
         "^terraform-apply",
       ],
@@ -145,6 +122,9 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
         },
       ],
       "options": {
+        "args": [
+          "-reconfigure",
+        ],
         "command": "terraform init",
         "cwd": "packages/terraform-setup",
       },
@@ -174,21 +154,7 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
     },
     "terraform-plan": {
       "cache": true,
-      "configurations": {
-        "dev": {
-          "args": [
-            "-out=tfplan",
-            "",
-          ],
-        },
-        "prod": {
-          "args": [
-            "-out=tfplan",
-            "",
-          ],
-        },
-      },
-      "defaultConfiguration": "dev",
+      "configurations": {},
       "dependsOn": [
         "terraform-init",
       ],
@@ -209,7 +175,7 @@ exports[`create-nx-terraform-app end to end flow 1`] = `
         },
       ],
       "options": {
-        "command": "terraform plan",
+        "command": "terraform plan -out=tfplan",
         "cwd": "packages/terraform-setup",
       },
       "outputs": [
@@ -255,7 +221,6 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
   "implicitDependencies": [],
   "metadata": {
     "nx-terraform": {
-      "backendProject": "terraform-setup",
       "projectType": "module",
     },
   },
@@ -296,26 +261,15 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
     },
     "terraform-destroy": {
       "cache": false,
-      "configurations": {
-        "dev": {
-          "args": [
-            "-auto-approve",
-            "",
-          ],
-        },
-        "prod": {
-          "args": [
-            "-auto-approve",
-            "",
-          ],
-        },
-      },
-      "defaultConfiguration": "dev",
+      "configurations": {},
       "dependsOn": [
         "terraform-init",
       ],
       "executor": "nx:run-commands",
       "options": {
+        "args": [
+          "-auto-approve",
+        ],
         "command": "terraform destroy",
         "cwd": "packages/terraform-infra",
       },
@@ -339,23 +293,7 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
     },
     "terraform-init": {
       "cache": false,
-      "configurations": {
-        "dev": {
-          "args": [
-            "-backend-config=../terraform-setup/backend.config",
-            "-reconfigure",
-            "",
-          ],
-        },
-        "prod": {
-          "args": [
-            "-backend-config=../terraform-setup/backend.config",
-            "-reconfigure",
-            "",
-          ],
-        },
-      },
-      "defaultConfiguration": "dev",
+      "configurations": {},
       "dependsOn": [
         "^terraform-apply",
       ],
@@ -373,7 +311,14 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
           "env": "TF_WORKSPACE",
         },
       ],
+      "metadata": {
+        "backendProject": "terraform-setup",
+      },
       "options": {
+        "args": [
+          "-reconfigure",
+          "-backend-config="../terraform-setup/backend.config"",
+        ],
         "command": "terraform init",
         "cwd": "packages/terraform-infra",
       },
@@ -403,21 +348,7 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
     },
     "terraform-plan": {
       "cache": false,
-      "configurations": {
-        "dev": {
-          "args": [
-            "-out=tfplan",
-            "",
-          ],
-        },
-        "prod": {
-          "args": [
-            "-out=tfplan",
-            "",
-          ],
-        },
-      },
-      "defaultConfiguration": "dev",
+      "configurations": {},
       "dependsOn": [
         "terraform-init",
       ],
@@ -438,7 +369,7 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
         },
       ],
       "options": {
-        "command": "terraform plan",
+        "command": "terraform plan -out=tfplan",
         "cwd": "packages/terraform-infra",
       },
       "outputs": [

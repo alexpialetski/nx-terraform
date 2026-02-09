@@ -12,22 +12,33 @@ Project discovery happens automatically when Nx loads your workspace. The plugin
 
 ## Discovery Process
 
+```mermaid
+flowchart LR
+  subgraph discovery["Discovery Process"]
+    A["1. Pattern match<br/>**/project.json"]
+    B["2. Validate<br/>metadata.projectType?"]
+    C["3. Create targets<br/>terraform-init, plan, apply, ..."]
+    A --> B --> C
+  end
+```
+
 ### Step 1: Pattern Matching
 
 The plugin looks for files matching:
 ```
-**/main.tf
+**/project.json
 ```
 
-This pattern finds all `main.tf` files recursively in your workspace.
+This pattern finds all `project.json` files recursively in your workspace.
 
 ### Step 2: Project Validation
 
-For each `main.tf` file found, the plugin checks:
+For each `project.json` file found, the plugin checks:
 
-1. **Project Configuration**: Does `project.json` exist in the same directory?
-2. **Project Type**: What is the `projectType` in `project.json`?
-3. **Metadata**: Does it have `nx-terraform` metadata?
+1. **Terraform metadata**: Does the project have `metadata['nx-terraform'].projectType` set?
+2. **Project type value**: One of `backend`, `stateful`, or `module` (used to determine which targets to create)
+
+Projects without this metadata are skipped (not considered Terraform projects by the plugin).
 
 ### Step 3: Target Creation
 
@@ -42,23 +53,28 @@ If validation passes, the plugin creates Terraform targets:
 
 ## Discovery Requirements
 
-### Required Files
+### Required Configuration
 
-For a project to be discovered:
+For a project to be discovered as a Terraform project:
 
-1. **main.tf** - Must exist in the project directory
-2. **project.json** - Must exist in the same directory as `main.tf`
+1. **project.json** - Must exist (discovery is triggered by this file).
+2. **metadata['nx-terraform'].projectType** - Must be set in `project.json` to one of:
+   - `backend` - Backend (state storage) project
+   - `stateful` - Stateful project (uses a backend)
+   - `module` - Reusable module project
+
+Projects are created by the plugin generators (`terraform-backend`, `terraform-module`) or by manually adding this metadata. The plugin does not scan for `main.tf`; it only considers projects that already have `project.json` with the nx-terraform metadata.
 
 ### Project Structure
 
 ```
 packages/
   └── my-terraform-project/
-      ├── project.json          # Required
-      ├── main.tf              # Required for discovery
-      ├── backend.tf           # Optional
+      ├── project.json          # Required; must include metadata['nx-terraform'].projectType
+      ├── main.tf               # Required for valid Terraform usage (not for discovery trigger)
+      ├── backend.tf            # Optional
       ├── provider.tf          # Optional
-      └── variables.tf         # Optional
+      └── variables.tf          # Optional
 ```
 
 ## Project Type Detection
@@ -71,9 +87,10 @@ The plugin determines project type from `project.json`:
 {
   "projectType": "application",
   "root": "packages/terraform-setup"
-  // No backendProject in metadata
 }
 ```
+
+Backend projects do not set `terraform-init.backendProject` (they are the backend).
 
 ### Stateful Project
 
@@ -81,23 +98,32 @@ The plugin determines project type from `project.json`:
 {
   "projectType": "application",
   "root": "packages/my-infra",
-  "metadata": {
-    "nx-terraform": {
-      "backendProject": "terraform-setup"
+  "targets": {
+    "terraform-init": {
+      "metadata": { "backendProject": "terraform-setup" }
     }
+  },
+  "metadata": {
+    "nx-terraform": { "projectType": "stateful" }
   }
 }
 ```
+
+(Alternatively, `metadata['nx-terraform'].projectType` can be `module` with `backendProject` set; the plugin then assigns stateful targets.)
 
 ### Module Project
 
 ```json
 {
-  "projectType": "library",
-  "root": "packages/networking"
-  // No backendProject in metadata
+  "projectType": "application",
+  "root": "packages/networking",
+  "metadata": {
+    "nx-terraform": { "projectType": "module" }
+  }
 }
 ```
+
+Module projects do not set `terraform-init.metadata.backendProject`.
 
 ## Discovery Patterns
 
@@ -195,15 +221,15 @@ The plugin must be registered in `nx.json`:
 
 ### Pattern Customization
 
-The discovery pattern is hardcoded to `**/main.tf`. This cannot be customized currently.
+The discovery pattern is hardcoded to `**/project.json`. This cannot be customized currently.
 
 ## Best Practices
 
 ### 1. Consistent Structure
 
-- Keep `main.tf` and `project.json` together
-- Use consistent directory structure
-- Follow naming conventions
+- Ensure `project.json` has `metadata['nx-terraform'].projectType` set (use generators or add manually)
+- Keep `main.tf` and other Terraform files in the project root
+- Use consistent directory structure and naming conventions
 
 ### 2. Clear Naming
 
@@ -239,20 +265,21 @@ The discovery pattern is hardcoded to `**/main.tf`. This cannot be customized cu
 
 ## Manual Project Creation
 
-If a project isn't discovered automatically:
+If a project isn't discovered as a Terraform project:
 
-1. **Create project.json:**
+1. **Create or update project.json** with Terraform metadata:
    ```json
    {
      "root": "packages/my-project",
-     "projectType": "application"
+     "projectType": "application",
+     "metadata": {
+       "nx-terraform": { "projectType": "module" }
+     }
    }
    ```
+   Use `backend` for a backend project, `stateful` for a stateful project, or `module` for a reusable module. For stateful projects, add `targets["terraform-init"].metadata.backendProject` pointing to your backend project.
 
-2. **Create main.tf:**
-   ```hcl
-   # Terraform configuration
-   ```
+2. **Add Terraform files** (e.g. `main.tf`) as needed for your project.
 
 3. **Verify discovery:**
    ```bash

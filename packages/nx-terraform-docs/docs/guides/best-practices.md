@@ -8,14 +8,6 @@ Recommended practices for using nx-terraform effectively in your infrastructure 
 
 ## Project Organization
 
-### Naming Conventions
-
-Use clear, descriptive names that indicate project type and purpose:
-
-- **Backend projects**: `terraform-setup`, `state-backend`, `shared-backend`
-- **Stateful projects**: `web-infra`, `api-infra`, `prod-infra`, `dev-infra`
-- **Module projects**: `networking`, `security`, `compute`, `database`
-
 ### Project Structure
 
 Organize projects logically:
@@ -24,9 +16,8 @@ Organize projects logically:
 packages/
 ├── terraform-setup/      # Backend (one per workspace/environment)
 ├── networking/           # Shared modules
-├── security/            # Shared modules
-├── dev-infra/           # Environment-specific infrastructure
-└── prod-infra/          # Environment-specific infrastructure
+├── security/             # Shared modules
+├── terraform-infra/      # Infrastructure
 ```
 
 ### Separation of Concerns
@@ -64,6 +55,7 @@ packages/
 ### Reusable Modules
 
 1. **Clear Interface**: Define clear inputs and outputs
+
    ```hcl
    variable "vpc_cidr" {
      description = "CIDR block for VPC"
@@ -72,6 +64,7 @@ packages/
    ```
 
 2. **Documentation**: Document your modules
+
    - Purpose and use cases
    - Input variables
    - Output values
@@ -80,6 +73,7 @@ packages/
 3. **Versioning**: Consider versioning for shared modules
 
 4. **Testing**: Test modules independently
+
    ```bash
    nx run networking:terraform-validate
    nx run networking:terraform-fmt
@@ -109,6 +103,7 @@ packages/
 ### Environment Configuration
 
 1. **Use tfvars files** for environment-specific values:
+
    ```
    packages/my-infra/
    └── tfvars/
@@ -118,6 +113,7 @@ packages/
    ```
 
 2. **Environment tags** to identify resources:
+
    ```hcl
    tags = {
      Environment = var.environment
@@ -137,16 +133,19 @@ packages/
 ### Dependency Best Practices
 
 1. **Clear Dependency Structure**:
+
    - Keep dependencies shallow when possible
    - Avoid deep dependency chains
    - Use clear naming
 
 2. **Module Organization**:
+
    - Create reusable modules for shared code
    - Reference modules explicitly
    - Document module dependencies
 
 3. **Backend Management**:
+
    - One backend per workspace (or environment)
    - Clear backend → infrastructure relationships
    - Document backend dependencies
@@ -208,10 +207,12 @@ packages/
 ### Leverage Caching
 
 1. **Run cached operations frequently**:
+
    - `terraform-fmt` (fast when cached)
    - `terraform-validate` (cached when unchanged)
 
 2. **Understand cache invalidation**:
+
    - Know which operations are cached
    - Understand when cache invalidates
    - Don't rely on cache for state-dependent operations
@@ -233,11 +234,13 @@ packages/
 ### Code Quality
 
 1. **Format code regularly**:
+
    ```bash
    nx run my-project:terraform-fmt
    ```
 
 2. **Validate before committing**:
+
    ```bash
    nx run my-project:terraform-validate
    ```
@@ -289,6 +292,7 @@ resource "aws_instance" "monitoring" {
 ### Pattern 3: Shared Backend, Separate States
 
 All environments can share the same backend (S3 bucket) but use different state keys:
+
 - `dev-infra/terraform.tfstate`
 - `prod-infra/terraform.tfstate`
 
@@ -309,4 +313,3 @@ module "compute" { ... }
 - [Dependencies](/docs/guides/dependencies) - Managing dependencies
 - [Configuration](/docs/guides/configuration) - Configuration management
 - [Troubleshooting](/docs/guides/troubleshooting) - Common issues and solutions
-

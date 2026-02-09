@@ -21,7 +21,7 @@ The plugin automatically detects and creates dependencies in two ways:
 
 ### 1. Backend Project Dependencies
 
-Projects with `backendProject` metadata automatically depend on their backend project.
+Projects with `terraform-init.metadata.backendProject` automatically depend on their backend project.
 
 **Example:**
 
@@ -29,9 +29,9 @@ Projects with `backendProject` metadata automatically depend on their backend pr
 {
   "root": "packages/my-infra",
   "projectType": "application",
-  "metadata": {
-    "nx-terraform": {
-      "backendProject": "terraform-setup"
+  "targets": {
+    "terraform-init": {
+      "metadata": { "backendProject": "terraform-setup" }
     }
   }
 }
@@ -85,7 +85,7 @@ nx graph
 #### Static Dependencies
 
 Created from:
-- `backendProject` metadata
+- `terraform-init.metadata.backendProject`
 - Module references in Terraform code
 
 These are always present and don't change based on execution.
@@ -206,8 +206,9 @@ When running `nx run-many --target=terraform-apply --all`:
 
 Dependencies can form chains:
 
-```
-A → B → C → D
+```mermaid
+flowchart LR
+  A[app] --> B[networking] --> C[security]
 ```
 
 **Example:**
@@ -338,5 +339,5 @@ For dependency-related issues, see the [Troubleshooting Guide](/docs/guides/trou
 
 - [Project Types](/docs/guides/project-types) - Learn about project types and their dependencies
 - [Project Discovery](/docs/guides/project-discovery) - Understand how projects are discovered
-- [Tutorial 5: Reusable Modules](/docs/tutorials/tutorial-05-reusable-modules) - Learn about module dependencies
+- [Tutorial 2: Add a reusable module](/docs/tutorials/tutorial-02-setup-backend) - Learn about module dependencies
 

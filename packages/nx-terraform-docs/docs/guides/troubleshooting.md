@@ -54,18 +54,19 @@ Common issues and solutions when working with nx-terraform.
 
 **Solutions:**
 
-1. **Check required files exist:**
+1. **Check project configuration:**
    ```bash
-   # Verify main.tf exists
-   ls packages/my-project/main.tf
-   
    # Verify project.json exists
    ls packages/my-project/project.json
+   
+   # Check that metadata['nx-terraform'].projectType is set
+   cat packages/my-project/project.json | jq '.metadata["nx-terraform"].projectType'
    ```
+   Discovery is triggered by `project.json`; the project must have `metadata['nx-terraform'].projectType` set to `backend`, `stateful`, or `module`. Use the plugin generators to create projects, or add this metadata manually.
 
 2. **Verify file locations:**
-   - `main.tf` and `project.json` must be in the same directory
-   - Directory structure must be correct
+   - `project.json` must exist in the project root
+   - Directory structure must be correct (Terraform files such as `main.tf` typically live in the same directory)
 
 3. **Check plugin is registered:**
    ```bash
@@ -93,12 +94,12 @@ Common issues and solutions when working with nx-terraform.
    }
    ```
 
-2. **Check metadata:**
+2. **Check metadata:** Ensure `metadata['nx-terraform'].projectType` is set. For stateful projects, ensure `targets['terraform-init'].metadata.backendProject` is set (see [Configuration](/docs/guides/configuration)).
    ```json
    {
      "metadata": {
        "nx-terraform": {
-         "backendProject": "terraform-setup"  // For stateful projects
+         "projectType": "module"
        }
      }
    }
@@ -227,12 +228,14 @@ Common issues and solutions when working with nx-terraform.
 
 2. **Verify project names match directory names**
 
-3. **Check `backendProject` metadata is correct:**
+3. **Check `terraform-init` target options are correct** (backend project name):
    ```json
    {
-     "metadata": {
-       "nx-terraform": {
-         "backendProject": "terraform-setup"
+     "targets": {
+       "terraform-init": {
+         "metadata": {
+           "backendProject": "terraform-setup"
+         }
        }
      }
    }

@@ -1,8 +1,12 @@
 import { execSync } from 'child_process';
 import { join, dirname } from 'path';
-import { mkdirSync, rmSync, readFileSync } from 'fs';
+import { mkdirSync, rmSync, readFileSync, writeFileSync } from 'fs';
 import { expect } from '@jest/globals';
-import { ProjectGraph } from '@nx/devkit';
+import {
+  ProjectConfiguration,
+  ProjectGraph,
+  TargetConfiguration,
+} from '@nx/devkit';
 
 /**
  * Creates a test project with create-nx-terraform-app and installs the plugin
@@ -135,4 +139,58 @@ export function verifyStaticDependency(
       }),
     ])
   );
+}
+
+/**
+ * Updates the project.json file in the given project directory
+ * @param projectDirectory - Directory of the workspace
+ * @param updateFunction - Function to update the project.json object
+ * @returns The updated project.json object
+ */
+export function updateProjectJson(
+  projectDirectory: string,
+  updateFunction: (
+    projectJsonObject: ProjectConfiguration
+  ) => ProjectConfiguration
+): ProjectConfiguration {
+  const projectJson = readFileSync(
+    join(projectDirectory, 'project.json'),
+    'utf-8'
+  );
+  const projectJsonObject = JSON.parse(projectJson) as ProjectConfiguration;
+  const updatedProjectJsonObject = updateFunction(projectJsonObject);
+  writeFileSync(
+    join(projectDirectory, 'project.json'),
+    JSON.stringify(updatedProjectJsonObject, null, 2)
+  );
+  return updatedProjectJsonObject;
+}
+
+export type TerraformTarget =
+  | 'terraform-init'
+  | 'terraform-plan'
+  | 'terraform-destroy';
+
+// meant to be used as a callback to updateProjectJson
+export const updateTargetConfiguration =
+  (
+    targetName: TerraformTarget,
+    updateFunction: (target: TargetConfiguration) => TargetConfiguration
+  ): Parameters<typeof updateProjectJson>[1] =>
+  (projectJsonObject) => {
+    const target = projectJsonObject.targets?.[targetName];
+
+    projectJsonObject.targets = projectJsonObject.targets ?? {};
+    projectJsonObject.targets[targetName] = updateFunction(target ?? {});
+    return projectJsonObject;
+  };
+
+/**
+ * Writes a file to the given filename recursively creating the directory if it doesn't exist
+ * @param filename - The filename to write to
+ * @param content - The content to write to the file
+ */
+export function writeFileSyncRecursive(filename: string, content = '') {
+  mkdirSync(dirname(filename), { recursive: true });
+  writeFileSync(filename, content);
 }

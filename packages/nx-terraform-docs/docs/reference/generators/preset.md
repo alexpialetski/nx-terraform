@@ -52,7 +52,7 @@ workspace-root/
     │   ├── provider.tf
     │   └── ... (other backend files)
     └── terraform-infra/    # Module (hardcoded name)
-        ├── project.json    # Contains metadata['nx-terraform'].backendProject: 'terraform-setup' (if backendType provided)
+        ├── project.json    # Contains targets['terraform-init'].metadata.backendProject: 'terraform-setup' (if backendType provided)
         ├── main.tf
         ├── backend.tf      # References terraform-setup backend (if backendType provided)
         ├── provider.tf     # Only if backendType provided

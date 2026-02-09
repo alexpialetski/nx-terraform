@@ -2,243 +2,103 @@
 sidebar_position: 2
 ---
 
-# Tutorial 2: Set Up a Backend
+# Tutorial 2: Add a Reusable Module
 
-In this tutorial, you'll learn how to set up and apply a Terraform backend. The backend manages where Terraform stores its state files, which is crucial for team collaboration and state management.
+Add a reusable Terraform module (e.g. networking) and use it from your infrastructure project. Nx will detect the dependency and order runs correctly.
 
-## What You'll Learn
+## What You'll Do
 
-- How to understand backend configuration
-- How to apply a backend project
-- The difference between local and remote backends
-- How backend.config files work
+- Create a reusable module with the generator (no backend = library-style module)
+- Reference it from `terraform-infra`
+- Run plan/apply and see the dependency in the graph
 
 ## Prerequisites
 
-- Completed [Tutorial 1: Create Your First Workspace](/docs/tutorials/tutorial-01-create-workspace)
-- Basic understanding of Terraform state
+- [Tutorial 1: Create a workspace and run](/docs/tutorials/tutorial-01-create-workspace) completed
 
-## Understanding Backends
+## Step 1: Create the Module
 
-A Terraform backend determines where state is stored. The nx-terraform plugin supports two backend types: **Local** and **AWS S3**.
-
-:::info
-For a comprehensive comparison of backend types, see the [Backend Types Guide](/docs/guides/backend-types).
-:::
-
-## Step 1: Examine the Backend Configuration
-
-Navigate to the backend project:
+From the workspace root:
 
 ```bash
-cd packages/terraform-setup
+nx g nx-terraform:terraform-module networking
 ```
 
-### View Backend Configuration
+This creates `packages/networking/` with no backend (reusable code only). See [Project Types](/docs/guides/project-types#module-projects) for module vs stateful.
 
-```bash
-cat backend.tf
-```
+## Step 2: Add Inputs and Outputs
 
-For a **local backend**, you'll see:
+Edit `packages/networking/variables.tf`:
 
 ```hcl
-terraform {
-  backend "local" {
-    path = "terraform.tfstate"
-  }
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+}
+
+variable "subnet_count" {
+  description = "Number of subnets"
+  type        = number
+  default     = 2
 }
 ```
 
-For an **AWS S3 backend**, you'll see:
+Edit `packages/networking/outputs.tf`:
 
 ```hcl
-terraform {
-  backend "s3" {
-    # Configuration will be provided via backend.config
-  }
+output "vpc_id" {
+  description = "VPC ID"
+  value       = "vpc-${replace(var.vpc_cidr, ".", "-")}"
+}
+
+output "subnet_ids" {
+  description = "Subnet IDs"
+  value       = [for i in range(var.subnet_count) : "subnet-${i}"]
 }
 ```
 
-The S3 backend uses a `backend.config` file that gets generated after the first apply.
+Edit `packages/networking/main.tf` to expose them (or leave minimal); the outputs above are enough for this tutorial.
 
-### View Main Configuration
+## Step 3: Use the Module in Infrastructure
 
-```bash
-cat main.tf
-```
-
-For a **local backend**, `main.tf` is typically minimal or empty since no infrastructure is needed.
-
-For an **AWS S3 backend**, `main.tf` contains the infrastructure to create:
-- S3 bucket for state storage
-- DynamoDB table for state locking (optional but recommended)
-
-## Step 2: Plan the Backend (Optional)
-
-Before applying, you can see what Terraform will create:
-
-```bash
-nx run terraform-setup:terraform-plan
-```
-
-For a local backend, this will show minimal changes (or no changes if already initialized).
-
-For an AWS S3 backend, this will show:
-- S3 bucket creation
-- DynamoDB table creation (if configured)
-- Bucket versioning and encryption settings
-
-## Step 3: Apply the Backend
-
-Apply the backend to create the state storage infrastructure:
-
-```bash
-nx run terraform-setup:terraform-apply
-```
-
-### For Local Backend
-
-The apply will:
-- Initialize Terraform (if not already done)
-- Create a local `terraform.tfstate` file
-- Complete quickly with minimal output
-
-### For AWS S3 Backend
-
-The apply will:
-- Create the S3 bucket
-- Create the DynamoDB table (if configured)
-- Enable versioning and encryption
-- Generate `backend.config` file with bucket details
-
-You'll be prompted to confirm. Type `yes` to proceed.
-
-## Step 4: Verify Backend Configuration
-
-### Check State File (Local Backend)
-
-```bash
-ls -la terraform.tfstate
-```
-
-You should see the state file created.
-
-### Check Backend Config (AWS S3 Backend)
-
-```bash
-cat backend.config
-```
-
-You'll see something like:
+Edit `packages/terraform-infra/main.tf` and add a module block (adjust or replace existing content):
 
 ```hcl
-bucket = "my-terraform-workspace-terraform-setup-abc123"
-key    = "terraform-setup/terraform.tfstate"
-region = "us-east-1"
-dynamodb_table = "terraform-setup-lock"
-```
+module "networking" {
+  source = "../../networking"
 
-This file is used by other projects to connect to the same backend.
+  vpc_cidr     = "10.0.0.0/16"
+  subnet_count = 3
+}
 
-## Step 5: Understand Backend Project Behavior
+resource "local_file" "example" {
+  content  = "VPC: ${module.networking.vpc_id}"
+  filename = "${path.module}/output.txt"
+}
 
-### Backend Projects Are Special
-
-Backend projects have unique characteristics:
-
-1. **Self-contained state**: They manage their own state (even if using remote backend, the backend project itself uses local state initially)
-2. **Generate backend.config**: After applying, they generate configuration files for other projects
-3. **No backend dependency**: They don't depend on another backend project
-
-### View Project Details
-
-```bash
-nx show project terraform-setup
-```
-
-Notice:
-- No `backendProject` in metadata (it's a backend itself)
-- All Terraform targets are available
-- Caching is enabled for safe operations
-
-## Step 6: Test Backend Operations
-
-### Validate Configuration
-
-```bash
-nx run terraform-setup:terraform-validate
-```
-
-This validates your Terraform configuration without making changes.
-
-### Format Code
-
-```bash
-nx run terraform-setup:terraform-fmt
-```
-
-This formats your Terraform files according to standard conventions.
-
-### View Outputs (if any)
-
-```bash
-nx run terraform-setup:terraform-output
-```
-
-Backend projects typically output:
-- Bucket name (for S3 backends)
-- Region
-- DynamoDB table name (if used)
-
-## Understanding Backend.config
-
-The `backend.config` file is crucial for connecting infrastructure projects to the backend:
-
-### How It Works
-
-1. Backend project applies and creates infrastructure
-2. Backend project generates `backend.config` with connection details
-3. Infrastructure projects read `backend.config` to connect to the backend
-4. This ensures all projects use the same state storage
-
-### File Location
-
-The `backend.config` file is in the backend project directory:
-```
-packages/terraform-setup/backend.config
-```
-
-Infrastructure projects reference this file via their `backend.tf`:
-
-```hcl
-terraform {
-  backend "s3" {
-    config_file = "../../terraform-setup/backend.config"
-  }
+output "vpc_id" {
+  value = module.networking.vpc_id
 }
 ```
 
-## Troubleshooting
+Ensure the `local` provider is in `packages/terraform-infra/provider.tf` if you use `local_file` (see [Tutorial 1](/docs/tutorials/tutorial-01-create-workspace)).
 
-If you encounter issues setting up your backend, see the [Troubleshooting Guide](/docs/guides/troubleshooting) for common problems and solutions.
+## Step 4: Run and Verify
 
-## Next Steps
+```bash
+nx run terraform-infra:terraform-init
+nx run terraform-infra:terraform-plan
+nx run terraform-infra:terraform-apply
+```
 
-Now that your backend is set up:
+Open the graph:
 
-- **Tutorial 3**: Learn how to [Create Your First Infrastructure Module](/docs/tutorials/tutorial-03-first-module) and connect it to this backend
-- **Guides**: Read about [Backend Types](/docs/guides/backend-types) for more details on backend options
+```bash
+nx graph
+```
+
+You should see `terraform-infra` → `networking`. Dependencies are inferred from the module `source` and from `terraform-init.metadata.backendProject`. See [Dependencies](/docs/guides/dependencies) for details.
 
 ## Summary
 
-In this tutorial, you:
-
-1. ✅ Examined backend configuration
-2. ✅ Applied a backend project (local or AWS S3)
-3. ✅ Verified backend setup
-4. ✅ Understood how `backend.config` works
-5. ✅ Learned about backend project characteristics
-
-Your backend is now ready to support infrastructure projects!
-
+You added a reusable module and consumed it from your infrastructure project. Next: [Tutorial 3: Multiple environments with tfvars](/docs/tutorials/tutorial-03-first-module) (one project, dev/prod via configurations).

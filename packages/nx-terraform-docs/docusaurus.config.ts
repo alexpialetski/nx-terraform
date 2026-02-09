@@ -9,6 +9,11 @@ const config: Config = {
   tagline: 'An Nx plugin for managing Terraform projects within an Nx monorepo',
   favicon: 'img/favicon.svg',
 
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
+
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
@@ -139,6 +144,9 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+    },
+    mermaid: {
+      theme: { light: 'neutral', dark: 'forest' },
     },
   } satisfies Preset.ThemeConfig,
 };
