@@ -109,22 +109,25 @@ export const TERRAFORM_VALIDATE_TARGET: TargetConfiguration = {
   inputs: [...TERRAFORM_ALL_INPUTS],
 };
 
-const TERRAFORM_OUTPUT_TFVARS_CMD =
-  'terraform output -json | jq -r "to_entries[] | \\"\\(.key)=\\(.value.value)\\"" > terraform-outputs.env';
-const TERRAFORM_OUTPUT_ENV_CMD =
-  'terraform output -json | jq -r "to_entries[] | \\"\\(.key | ascii_upcase)=\\(.value.value)\\"" > terraform-outputs.env';
+const TERRAFORM_OUTPUT_TFVARS_CMD_PREFIX =
+  'terraform output -json | jq -r "to_entries[] | \\"\\(.key)=\\(.value.value)\\"" > ';
+const TERRAFORM_OUTPUT_ENV_CMD_PREFIX =
+  'terraform output -json | jq -r "to_entries[] | \\"\\(.key | ascii_upcase)=\\(.value.value)\\"" > ';
 
 export const getTerraformOutputTarget = (
   options: TerraformOutputTargetOptions
-): TargetConfiguration => ({
-  executor: 'nx:run-commands',
-  dependsOn: ['terraform-init' satisfies TerraformTargetDependency],
-  outputs: ['{projectRoot}/terraform-outputs.env'],
-  options: {
-    command:
-      options.outputFormat === 'env'
-        ? TERRAFORM_OUTPUT_ENV_CMD
-        : TERRAFORM_OUTPUT_TFVARS_CMD,
-    cwd: '{projectRoot}',
-  },
-});
+): TargetConfiguration => {
+  const cmd =
+    options.outputFormat === 'env'
+      ? TERRAFORM_OUTPUT_ENV_CMD_PREFIX + options.outputFile
+      : TERRAFORM_OUTPUT_TFVARS_CMD_PREFIX + options.outputFile;
+  return {
+    executor: 'nx:run-commands',
+    dependsOn: ['terraform-init' satisfies TerraformTargetDependency],
+    outputs: [`{projectRoot}/${options.outputFile}`],
+    options: {
+      command: cmd,
+      cwd: '{projectRoot}',
+    },
+  };
+};

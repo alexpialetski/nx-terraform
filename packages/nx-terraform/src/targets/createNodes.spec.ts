@@ -213,7 +213,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getStatefulProjectTargets({
         init: { backendProject: 'my-backend' },
-        output: { outputFormat: 'tfvars' },
+        output: { outputFormat: 'tfvars', outputFile: 'terraform-outputs.env' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -251,7 +251,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getBackendProjectTargets({
         init: { backendProject: null },
-        output: { outputFormat: 'tfvars' },
+        output: { outputFormat: 'tfvars', outputFile: 'terraform-outputs.env' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -285,7 +285,13 @@ describe('createNodes', () => {
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getBackendProjectTargets(
-        { init: { backendProject: null }, output: { outputFormat: 'tfvars' } },
+        {
+          init: { backendProject: null },
+          output: {
+            outputFormat: 'tfvars',
+            outputFile: 'terraform-outputs.env',
+          },
+        },
         'aws-s3'
       );
 
@@ -322,7 +328,13 @@ describe('createNodes', () => {
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getBackendProjectTargets(
-        { init: { backendProject: null }, output: { outputFormat: 'tfvars' } },
+        {
+          init: { backendProject: null },
+          output: {
+            outputFormat: 'tfvars',
+            outputFile: 'terraform-outputs.env',
+          },
+        },
         'local'
       );
 
@@ -359,7 +371,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getStatefulProjectTargets({
         init: { backendProject: null },
-        output: { outputFormat: 'tfvars' },
+        output: { outputFormat: 'tfvars', outputFile: 'terraform-outputs.env' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -429,6 +441,36 @@ describe('createNodes', () => {
       expect(cmd).toContain('ascii_upcase');
       expect(cmd).toContain('.value.value)');
     });
+
+    it('should use custom output file when terraform-output metadata.outputFile is set', async () => {
+      const projectJson: ProjectConfiguration = {
+        root: PROJECT_ROOT,
+        projectType: 'application',
+        targets: {
+          'terraform-output': {
+            metadata: { outputFile: 'my-outputs.env' },
+          },
+        },
+        metadata: {
+          'nx-terraform': {
+            projectType: 'backend',
+          },
+        },
+      };
+
+      setupFileMocks(projectJson);
+
+      const context = createTestContext();
+      const result = await executeHandler(CONFIG_FILE_PATH, context);
+
+      const extracted = extractProjects(result, PROJECT_ROOT);
+      expect(extracted).not.toBeNull();
+      const target =
+        extracted!.projects[PROJECT_ROOT].targets?.['terraform-output'];
+      expect(target?.outputs).toContain('{projectRoot}/my-outputs.env');
+      const cmd = target?.options?.command as string;
+      expect(cmd).toContain('> my-outputs.env');
+    });
   });
 
   describe('library/module projects', () => {
@@ -451,7 +493,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getModuleProjectTargets({
         init: { backendProject: null },
-        output: { outputFormat: 'tfvars' },
+        output: { outputFormat: 'tfvars', outputFile: 'terraform-outputs.env' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);

@@ -95,7 +95,7 @@ async function createNodesInternal(
 
 /**
  * Normalizes project.json into params for building Terraform targets.
- * backendProject is read from terraform-init target's metadata; outputFormat from terraform-output target's metadata.
+ * backendProject is read from terraform-init target's metadata; outputFormat and outputFile from terraform-output target's metadata.
  */
 function normalizeTargetOptions(
   projectJsonContent: ProjectConfiguration
@@ -111,6 +111,7 @@ function normalizeTargetOptions(
     | TerraformOutputTargetMetadata
     | undefined;
   const outputFormat = outputMetadata?.outputFormat ?? 'tfvars';
+  const outputFile = outputMetadata?.outputFile ?? 'terraform-outputs.env';
 
   return {
     init: {
@@ -118,6 +119,7 @@ function normalizeTargetOptions(
     },
     output: {
       outputFormat,
+      outputFile,
     },
   };
 }

@@ -27,36 +27,42 @@ The `terraform-output` target displays output values defined in your Terraform c
 
 - **terraform-init**: Must run before `terraform-output` (to access state)
 
-## Output format (metadata)
+## Output format and file (metadata)
 
-The target writes outputs to `terraform-outputs.env` in the project root. You can choose the format via the **terraform-output** target metadata in `project.json`:
+The target writes outputs to a file in the project root (default: `terraform-outputs.env`). You can set the format and filename via the **terraform-output** target metadata in `project.json`:
 
-| Format               | Metadata                           | Result                                                                                     |
-| -------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| **tfvars** (default) | omit or `"outputFormat": "tfvars"` | `key=value` (original Terraform output names), suitable for `-var-file` or Terraform input |
-| **env**              | `"outputFormat": "env"`            | `KEY=value` (UPPERCASE keys), suitable for `export` or shell/CI env files                  |
+| Option         | Default                   | Description                                                 |
+| -------------- | ------------------------- | ----------------------------------------------------------- |
+| `outputFormat` | `"tfvars"`                | `"tfvars"` = `key=value`; `"env"` = `KEY=value` (UPPERCASE) |
+| `outputFile`   | `"terraform-outputs.env"` | Output filename (relative to project root)                  |
 
-Example — env format (UPPERCASE keys):
+| Format               | `outputFormat`     | Result                                                                                     |
+| -------------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| **tfvars** (default) | omit or `"tfvars"` | `key=value` (original Terraform output names), suitable for `-var-file` or Terraform input |
+| **env**              | `"env"`            | `KEY=value` (UPPERCASE keys), suitable for `export` or shell/CI env files                  |
+
+Example — env format and custom file:
 
 ```json
 {
   "targets": {
     "terraform-output": {
       "metadata": {
-        "outputFormat": "env"
+        "outputFormat": "env",
+        "outputFile": "my-outputs.env"
       }
     }
   }
 }
 ```
 
-If you omit `terraform-output` metadata, the default is `tfvars`.
+If you omit `terraform-output` metadata, the default is `outputFormat: "tfvars"` and `outputFile: "terraform-outputs.env"`.
 
 ## Behavior
 
 ### Output file
 
-The target runs `terraform output -json` and writes `key=value` (or `KEY=value` when `outputFormat` is `env`) to **terraform-outputs.env** in the project root. The format is controlled by target metadata (see [Output format (metadata)](#output-format-metadata) above).
+The target runs `terraform output -json` and writes `key=value` (or `KEY=value` when `outputFormat` is `env`) to a file in the project root. The default file is **terraform-outputs.env**; you can override it with `outputFile` in target metadata (see [Output format and file (metadata)](#output-format-and-file-metadata) above).
 
 ### Output display (CLI passthrough)
 

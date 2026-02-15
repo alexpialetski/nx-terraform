@@ -8,6 +8,7 @@ export interface TerraformInitTargetMetadata {
 /** Metadata for terraform-output target (TargetConfiguration.metadata). */
 export interface TerraformOutputTargetMetadata {
   outputFormat?: 'tfvars' | 'env';
+  outputFile?: string;
 }
 
 export type TerraformTarget =
@@ -31,9 +32,10 @@ export type TerraformInitTargetOptions = {
   backendProject: string | null;
 };
 
-/** Options normalized for terraform-output (outputFormat). */
+/** Options normalized for terraform-output (outputFormat, outputFile). */
 export type TerraformOutputTargetOptions = {
   outputFormat: 'tfvars' | 'env';
+  outputFile: string;
 };
 
 /** Per-target normalized options used to build Terraform targets. varFile is via target args/configurations. */

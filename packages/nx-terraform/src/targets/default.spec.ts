@@ -2,7 +2,10 @@ import { getTerraformOutputTarget } from './default';
 
 describe('getTerraformOutputTarget', () => {
   it('should use tfvars format (key=value) when outputFormat is tfvars', () => {
-    const target = getTerraformOutputTarget({ outputFormat: 'tfvars' });
+    const target = getTerraformOutputTarget({
+      outputFormat: 'tfvars',
+      outputFile: 'terraform-outputs.env',
+    });
     expect(target.executor).toBe('nx:run-commands');
     expect(target.dependsOn).toContain('terraform-init');
     expect(target.outputs).toContain('{projectRoot}/terraform-outputs.env');
@@ -15,10 +18,23 @@ describe('getTerraformOutputTarget', () => {
   });
 
   it('should use env format (UPPERCASE keys) when outputFormat is env', () => {
-    const target = getTerraformOutputTarget({ outputFormat: 'env' });
+    const target = getTerraformOutputTarget({
+      outputFormat: 'env',
+      outputFile: 'terraform-outputs.env',
+    });
     const cmd = target.options?.command as string;
     expect(cmd).toContain('ascii_upcase');
     expect(cmd).toContain('.value.value)');
     expect(cmd).toContain('> terraform-outputs.env');
+  });
+
+  it('should use custom outputFile in command and outputs', () => {
+    const target = getTerraformOutputTarget({
+      outputFormat: 'tfvars',
+      outputFile: 'my-outputs.env',
+    });
+    expect(target.outputs).toContain('{projectRoot}/my-outputs.env');
+    const cmd = target.options?.command as string;
+    expect(cmd).toContain('> my-outputs.env');
   });
 });
