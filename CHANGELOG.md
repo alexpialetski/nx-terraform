@@ -1,3 +1,14 @@
+## 0.10.0 (2026-02-15)
+
+### 🚀 Features
+
+- **nx-terraform:** terraform-output format via target metadata ([5f8946d](https://github.com/alexpialetski/nx-terraform/commit/5f8946d))
+- **terraform-backend:** aws-s3 plan via sync script, metadata helper, and doc fixes ([b349b6c](https://github.com/alexpialetski/nx-terraform/commit/b349b6c))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+
 ## 0.9.0 (2026-02-09)
 
 This was a version bump only, there were no code changes.
