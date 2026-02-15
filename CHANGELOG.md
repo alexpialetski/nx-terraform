@@ -1,3 +1,13 @@
+## 0.11.0 (2026-02-15)
+
+### 🚀 Features
+
+- **nx-terraform:** add outputFile metadata for terraform-output target ([27f7538](https://github.com/alexpialetski/nx-terraform/commit/27f7538))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+
 ## 0.10.0 (2026-02-15)
 
 ### 🚀 Features
