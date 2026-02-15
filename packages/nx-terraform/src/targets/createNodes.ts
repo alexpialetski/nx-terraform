@@ -14,7 +14,7 @@ import {
 } from './inferedTasks';
 import type { TerraformInitTargetMetadata } from './type';
 import { NxTerraformPluginOptions } from '../types';
-import { PLUGIN_NAME } from '../constants';
+import { getNxTerraformProjectMetadata } from '../utils/getNxTerraformProjectMetadata';
 
 // File glob to find all the configuration files for this plugin
 const terraformConfigGlob = '**/project.json';
@@ -51,9 +51,8 @@ async function createNodesInternal(
     return {};
   }
 
-  // Check if this is a Terraform project by checking metadata
-  const terraformProjectType =
-    projectJsonContent.metadata?.[PLUGIN_NAME]?.projectType;
+  const nxTerraformMetadata = getNxTerraformProjectMetadata(projectJsonContent);
+  const terraformProjectType = nxTerraformMetadata?.projectType;
 
   if (!terraformProjectType) {
     // Not a Terraform project (no projectType metadata), skip
@@ -66,7 +65,10 @@ async function createNodesInternal(
 
   // Determine targets based on metadata (no fallback scanning needed)
   if (terraformProjectType === 'backend') {
-    projectTargets = getBackendProjectTargets(targetConfigurationParams);
+    projectTargets = getBackendProjectTargets(
+      targetConfigurationParams,
+      nxTerraformMetadata.backendType
+    );
   } else if (targetConfigurationParams.init.backendProject) {
     // If backendProject option is set, it's a stateful module
     projectTargets = getStatefulProjectTargets(targetConfigurationParams);
@@ -96,7 +98,9 @@ function normalizeTargetOptions(
   projectJsonContent: ProjectConfiguration
 ): TargetsConfigurationParams {
   const initTarget = projectJsonContent.targets?.['terraform-init'];
-  const metadata = initTarget?.metadata as TerraformInitTargetMetadata | undefined;
+  const metadata = initTarget?.metadata as
+    | TerraformInitTargetMetadata
+    | undefined;
   const backendProject = metadata?.backendProject ?? null;
 
   return {

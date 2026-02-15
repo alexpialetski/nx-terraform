@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Sync Terraform state with the backend S3 bucket before running plan.
+# - If the bucket exists but state does not track it: import the bucket (and versioning, object lock).
+# - Finally runs: terraform plan -out=tfplan
+# Run with cwd = project root. Requires: TF_VAR_region, TF_VAR_account_id, aws CLI, terraform.
+
+set -e
+
+# Bucket name (same as Terraform locals); require env vars
+: "${TF_VAR_account_id:?ERROR: TF_VAR_account_id is not set}"
+: "${TF_VAR_region:?ERROR: TF_VAR_region is not set}"
+BUCKET_NAME="<%= bucketNamePrefix %>-${TF_VAR_account_id}-${TF_VAR_region}"
+
+# 1. Check if bucket exists in AWS
+BUCKET_EXISTS=0
+if aws s3api head-bucket --bucket "$BUCKET_NAME" >/dev/null 2>&1; then
+  BUCKET_EXISTS=1
+fi
+
+# 2. Check if state currently tracks the bucket
+STATE_HAS_BUCKET=0
+if terraform state list 2>/dev/null | grep -q '^aws_s3_bucket\.tf_state$'; then
+  STATE_HAS_BUCKET=1
+fi
+
+# 3. If bucket exists but state doesn't track it: import
+if [ "$BUCKET_EXISTS" -eq 1 ] && [ "$STATE_HAS_BUCKET" -eq 0 ]; then
+  echo "Bucket $BUCKET_NAME exists but is not in state. Importing..."
+  terraform import -input=false aws_s3_bucket.tf_state "$BUCKET_NAME"
+  terraform import -input=false aws_s3_bucket_versioning.tf_state "$BUCKET_NAME"
+  terraform import -input=false aws_s3_bucket_object_lock_configuration.tf_state "$BUCKET_NAME"
+  echo "Import done."
+fi
+
+# 4. Run plan -out=tfplan
+exec terraform plan -out=tfplan

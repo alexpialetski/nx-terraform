@@ -262,6 +262,82 @@ describe('createNodes', () => {
       }
     });
 
+    it('should use sync script for terraform-plan when backend has backendType aws-s3', async () => {
+      const projectJson: ProjectConfiguration = {
+        root: PROJECT_ROOT,
+        projectType: 'application',
+        targets: {},
+        metadata: {
+          'nx-terraform': {
+            projectType: 'backend',
+            backendType: 'aws-s3',
+          },
+        },
+      };
+
+      setupFileMocks(projectJson, {
+        'main.tf': 'resource "aws_s3_bucket" "test" {}',
+      });
+
+      const context = createTestContext();
+      const result = await executeHandler(CONFIG_FILE_PATH, context);
+
+      const expectedTargets = getBackendProjectTargets(
+        { init: { backendProject: null } },
+        'aws-s3'
+      );
+
+      const extracted = extractProjects(result, PROJECT_ROOT);
+      if (extracted) {
+        verifyProjectTargets(
+          extracted.projects,
+          extracted.PROJECT_ROOT,
+          expectedTargets
+        );
+        expect(
+          extracted.projects[PROJECT_ROOT].targets?.['terraform-plan']?.options
+            ?.command
+        ).toBe('./scripts/sync_backend_state.sh');
+      }
+    });
+
+    it('should use default plan command when backend has backendType local', async () => {
+      const projectJson: ProjectConfiguration = {
+        root: PROJECT_ROOT,
+        projectType: 'application',
+        targets: {},
+        metadata: {
+          'nx-terraform': {
+            projectType: 'backend',
+            backendType: 'local',
+          },
+        },
+      };
+
+      setupFileMocks(projectJson);
+
+      const context = createTestContext();
+      const result = await executeHandler(CONFIG_FILE_PATH, context);
+
+      const expectedTargets = getBackendProjectTargets(
+        { init: { backendProject: null } },
+        'local'
+      );
+
+      const extracted = extractProjects(result, PROJECT_ROOT);
+      if (extracted) {
+        verifyProjectTargets(
+          extracted.projects,
+          extracted.PROJECT_ROOT,
+          expectedTargets
+        );
+        expect(
+          extracted.projects[PROJECT_ROOT].targets?.['terraform-plan']?.options
+            ?.command
+        ).toBe('terraform plan -out=tfplan');
+      }
+    });
+
     it('should use stateful targets when terraformProjectType is stateful', async () => {
       const projectJson: ProjectConfiguration = {
         root: PROJECT_ROOT,

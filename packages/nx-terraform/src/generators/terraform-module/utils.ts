@@ -1,6 +1,6 @@
 import { readProjectConfiguration, Tree } from '@nx/devkit';
 import { TerraformBackendType } from '../../types';
-import { PLUGIN_NAME } from '../../constants';
+import { getNxTerraformProjectMetadata } from '../../utils/getNxTerraformProjectMetadata';
 
 /**
  * Determines the backendType from the backend project metadata.
@@ -17,10 +17,8 @@ export function getBackendTypeFromProject(
 
   // Verify backend project exists and get backendType from metadata
   const backendConfig = readProjectConfiguration(tree, backendProject);
-
-  // Get backendType from backend project metadata
-  const backendTypeFromMetadata =
-    backendConfig.metadata?.[PLUGIN_NAME]?.backendType;
+  const metadata = getNxTerraformProjectMetadata(backendConfig);
+  const backendTypeFromMetadata = metadata?.backendType;
 
   if (!backendTypeFromMetadata) {
     throw new Error(

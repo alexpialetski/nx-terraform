@@ -59,6 +59,46 @@ describe('terraform-backend generator', () => {
 
       expect(result.locals[0].bucket_name).toMatch(/^myteam-.+/);
     });
+
+    it('should generate sync_backend_state.sh and not check_bucket.sh', async () => {
+      const tree = createTreeWithEmptyWorkspace();
+      await terraformBackendGenerator(tree, awsOptions);
+
+      expect(
+        tree.exists(`packages/${awsOptions.name}/scripts/sync_backend_state.sh`)
+      ).toBeTruthy();
+      expect(
+        tree.exists(`packages/${awsOptions.name}/scripts/check_bucket.sh`)
+      ).toBeFalsy();
+    });
+
+    it('should generate s3.tf without data external or count', async () => {
+      const tree = createTreeWithEmptyWorkspace();
+      await terraformBackendGenerator(tree, awsOptions);
+
+      const s3Tf = tree.read(
+        `packages/${awsOptions.name}/s3.tf`,
+        'utf-8'
+      ) as string;
+      expect(s3Tf).not.toContain('data "external"');
+      expect(s3Tf).not.toContain('count =');
+    });
+
+    it('should include bucketNamePrefix in sync script when provided', async () => {
+      const prefixOptions: TerraformBackendGeneratorSchema = {
+        name: 'tf-backend-aws-prefix',
+        backendType: 'aws-s3',
+        bucketNamePrefix: 'myteam',
+      };
+      const tree = createTreeWithEmptyWorkspace();
+      await terraformBackendGenerator(tree, prefixOptions);
+
+      const script = tree.read(
+        `packages/${prefixOptions.name}/scripts/sync_backend_state.sh`,
+        'utf-8'
+      ) as string;
+      expect(script).toContain('BUCKET_NAME="myteam-');
+    });
   });
 
   describe('local backend', () => {

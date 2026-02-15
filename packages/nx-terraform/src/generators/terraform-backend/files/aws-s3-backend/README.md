@@ -8,7 +8,7 @@ This backend includes:
 
 - **S3 Bucket** for Terraform state storage with versioning and object lock
 - **Backend Configuration** file generation for cluster package initialization
-- **Bucket Existence Validation** to handle temporary AWS account scenarios
+- **State sync before plan** to import an existing bucket when it is not yet in state
 
 ## 🏗️ Resources Created
 
@@ -18,7 +18,7 @@ This backend includes:
 - **Features**:
   - Versioning enabled for state history
   - Object lock enabled for state protection
-  - Force destroy enabled for temporary accounts
+  - Force destroy disabled by default for production safety
 - **Naming**: `<%= bucketNamePrefix %>-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}` (prefix + AWS account id + region)
 
 ### Backend Configuration (`local_file.backend_config`)
@@ -27,11 +27,16 @@ This backend includes:
 - **Content**: S3 bucket name, key, and region configuration
 - **Usage**: Referenced by cluster package Terraform initialization
 
-### Bucket Existence Check (`data.external.check_bucket`)
+### State sync before plan (`scripts/sync_backend_state.sh`)
 
-- **Purpose**: Prevents resource conflicts in temporary AWS accounts
-- **Script**: `scripts/check_bucket.sh`
-- **Logic**: Only creates bucket if it doesn't already exist
+- **Purpose**: Keeps Terraform state in sync with an existing S3 bucket before planning
+- **When**: Run automatically as part of the **terraform-plan** target
+- **Logic**:
+  1. Resolves bucket name (same as Terraform: `<%= bucketNamePrefix %>-{account_id}-{region}`)
+  2. Checks if the bucket exists in AWS and if state already tracks it
+  3. If the bucket exists but state does not track it → runs `terraform import` for the bucket, versioning, and object lock
+  4. Runs `terraform plan -out=tfplan`
+- **Required env vars**: `TF_VAR_account_id`, `TF_VAR_region` (must match the AWS account/region in use)
 
 ## 🔐 Security Considerations
 
@@ -67,4 +72,6 @@ After creation, other Terraform modules can reference the generated `backend.con
 
 ## 🧪 Validation
 
-The included script `scripts/check_bucket.sh` prevents duplicate bucket creation when working in ephemeral AWS accounts.
+Run **terraform-plan** (e.g. `nx run <%= name %>:terraform-plan`). The sync script ensures the bucket is imported when it already exists and state is absent, then produces the plan. Use **terraform-apply** as usual to apply.
+
+You may need to run `chmod +x scripts/sync_backend_state.sh` once after generating the project.

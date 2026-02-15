@@ -9,6 +9,7 @@ import type { SyncGeneratorResult } from 'nx/src/utils/sync-generators';
 import { BackendResource, ModuleResource } from '../../utils/TerraformFile';
 import { ProviderTerraformFile } from '../../utils/ProviderTerraformFile';
 import { TreeTerraformFileParser } from '../../utils/TreeTerraformFileParser';
+import { getNxTerraformProjectMetadata } from '../../utils/getNxTerraformProjectMetadata';
 import { SyncTerraformMetadataGeneratorSchema } from './schema';
 import { PLUGIN_NAME } from '../../constants';
 
@@ -33,7 +34,8 @@ export async function syncTerraformMetadataGenerator(
       const projectRoot = project.root;
       // Read current project configuration first to check if this is a Terraform project
       const projectConfig = readProjectConfiguration(tree, projectName);
-      const nxTerraformProjectMetadata = projectConfig.metadata?.[PLUGIN_NAME];
+      const nxTerraformProjectMetadata =
+        getNxTerraformProjectMetadata(projectConfig);
 
       // Only process projects that have projectType set (indicating they are Terraform projects)
       if (!nxTerraformProjectMetadata) {

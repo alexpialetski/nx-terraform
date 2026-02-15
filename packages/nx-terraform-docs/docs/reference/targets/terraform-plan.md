@@ -114,6 +114,7 @@ nx run my-infra:terraform-plan -- -target=aws_instance.example
 
 ## Notes
 
+- **AWS S3 backend projects**: This target runs `scripts/sync_backend_state.sh` (state sync then plan) instead of `terraform plan` directly. See the [terraform-backend generator](/docs/reference/generators/terraform-backend#state-sync-before-plan-aws-s3) for details.
 - Plans are state-dependent and cannot be cached for stateful projects
 - Plans can be saved and applied later
 - Plans show detailed change information

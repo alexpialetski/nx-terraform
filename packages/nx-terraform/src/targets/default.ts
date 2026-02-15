@@ -48,6 +48,20 @@ export const getTerraformPlanTarget = (): TargetConfiguration => ({
   outputs: ['{projectRoot}/tfplan'],
 });
 
+/** Plan target for aws-s3 backend: runs sync script (import-if-needed then plan). */
+export const getTerraformPlanTargetForAwsS3Backend =
+  (): TargetConfiguration => ({
+    cache: true,
+    executor: 'nx:run-commands',
+    dependsOn: ['terraform-init' satisfies TerraformTargetDependency],
+    options: {
+      cwd: '{projectRoot}',
+      command: './scripts/sync_backend_state.sh',
+    },
+    inputs: [...TERRAFORM_ALL_INPUTS],
+    outputs: ['{projectRoot}/tfplan'],
+  });
+
 export const TERRAFORM_APPLY_TARGET: TargetConfiguration = {
   cache: false,
   executor: 'nx:run-commands',

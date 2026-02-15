@@ -6,3 +6,9 @@
 export interface NxTerraformPluginOptions {}
 
 export type TerraformBackendType = 'aws-s3' | 'local';
+
+/** Shape of metadata[PLUGIN_NAME] on Terraform project configuration. */
+export interface NxTerraformProjectMetadata {
+  projectType?: 'backend' | 'module' | 'stateful';
+  backendType?: TerraformBackendType;
+}

@@ -10,4 +10,5 @@ export interface TerraformBackendGeneratorNormalizedSchema
   extends TerraformBackendGeneratorSchema {
   bucketNamePrefix: string;
   ignoreFile: string;
+  tmpl: string;
 }

@@ -111,7 +111,7 @@ nx-terraform discovers projects by looking for `project.json` files with Terrafo
 }
 ```
 
-Any project with this metadata and a `main.tf` file is automatically discovered.
+Any project with this metadata is automatically discovered (no `main.tf` required for discovery).
 
 ### Why isn't my Terraform project discovered?
 
@@ -120,7 +120,6 @@ Check these common issues:
 1. **Missing `project.json`** - Every project needs one
 2. **Missing metadata** - Must have `metadata['nx-terraform'].projectType`
 3. **Invalid project type** - Must be "backend", "stateful", or "module"
-4. **Missing `main.tf`** - Projects need at least one `.tf` file
 
 Run this to verify:
 ```bash

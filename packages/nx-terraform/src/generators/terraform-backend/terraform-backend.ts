@@ -53,6 +53,7 @@ const normalizeOptions = (
   ...options,
   bucketNamePrefix: options.bucketNamePrefix || 'terraform-state',
   ignoreFile: '.gitignore',
+  tmpl: '',
 });
 
 export default terraformBackendGenerator;
