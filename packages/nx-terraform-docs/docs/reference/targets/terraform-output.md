@@ -27,11 +27,40 @@ The `terraform-output` target displays output values defined in your Terraform c
 
 - **terraform-init**: Must run before `terraform-output` (to access state)
 
+## Output format (metadata)
+
+The target writes outputs to `terraform-outputs.env` in the project root. You can choose the format via the **terraform-output** target metadata in `project.json`:
+
+| Format               | Metadata                           | Result                                                                                     |
+| -------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| **tfvars** (default) | omit or `"outputFormat": "tfvars"` | `key=value` (original Terraform output names), suitable for `-var-file` or Terraform input |
+| **env**              | `"outputFormat": "env"`            | `KEY=value` (UPPERCASE keys), suitable for `export` or shell/CI env files                  |
+
+Example — env format (UPPERCASE keys):
+
+```json
+{
+  "targets": {
+    "terraform-output": {
+      "metadata": {
+        "outputFormat": "env"
+      }
+    }
+  }
+}
+```
+
+If you omit `terraform-output` metadata, the default is `tfvars`.
+
 ## Behavior
 
-### Output Display
+### Output file
 
-Shows outputs defined in `outputs.tf`:
+The target runs `terraform output -json` and writes `key=value` (or `KEY=value` when `outputFormat` is `env`) to **terraform-outputs.env** in the project root. The format is controlled by target metadata (see [Output format (metadata)](#output-format-metadata) above).
+
+### Output display (CLI passthrough)
+
+You can pass arguments to the underlying `terraform output` command. Shows outputs defined in `outputs.tf`:
 
 ```
 Outputs:
@@ -101,4 +130,3 @@ nx run my-infra:terraform-output -- vpc_id
 - Requires infrastructure to be applied first
 - JSON format is useful for scripting
 - Outputs are defined in `outputs.tf`
-

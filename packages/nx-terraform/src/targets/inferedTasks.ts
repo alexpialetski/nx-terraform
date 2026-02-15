@@ -4,10 +4,10 @@ import {
   getTerraformPlanTarget,
   getTerraformPlanTargetForAwsS3Backend,
   getTerraformDestroyTarget,
+  getTerraformOutputTarget,
   TERRAFORM_APPLY_TARGET,
   TERRAFORM_FMT_TARGET,
   TERRAFORM_VALIDATE_TARGET,
-  TERRAFORM_OUTPUT_TARGET,
 } from './default';
 import { TargetsConfigurationParams, TerraformProjectTargets } from './type';
 import type { TerraformBackendType } from '../types';
@@ -33,7 +33,7 @@ export const getBackendProjectTargets = (
     'terraform-destroy': getTerraformDestroyTarget(),
     'terraform-fmt': TERRAFORM_FMT_TARGET,
     'terraform-validate': TERRAFORM_VALIDATE_TARGET,
-    'terraform-output': TERRAFORM_OUTPUT_TARGET,
+    'terraform-output': getTerraformOutputTarget(params.output),
   };
 };
 
@@ -46,7 +46,7 @@ export const getStatefulProjectTargets = (
   'terraform-destroy': getTerraformDestroyTarget(),
   'terraform-fmt': TERRAFORM_FMT_TARGET,
   'terraform-validate': TERRAFORM_VALIDATE_TARGET,
-  'terraform-output': TERRAFORM_OUTPUT_TARGET,
+  'terraform-output': getTerraformOutputTarget(params.output),
 });
 
 export const getModuleProjectTargets = (
@@ -68,6 +68,6 @@ export const getModuleProjectTargets = (
     'terraform-destroy': getStubTarget(getTerraformDestroyTarget()),
     'terraform-fmt': TERRAFORM_FMT_TARGET,
     'terraform-validate': TERRAFORM_VALIDATE_TARGET,
-    'terraform-output': getStubTarget(TERRAFORM_OUTPUT_TARGET),
+    'terraform-output': getStubTarget(getTerraformOutputTarget(params.output)),
   };
 };

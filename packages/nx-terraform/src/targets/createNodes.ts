@@ -12,7 +12,10 @@ import {
   getStatefulProjectTargets,
   type TargetsConfigurationParams,
 } from './inferedTasks';
-import type { TerraformInitTargetMetadata } from './type';
+import type {
+  TerraformInitTargetMetadata,
+  TerraformOutputTargetMetadata,
+} from './type';
 import { NxTerraformPluginOptions } from '../types';
 import { getNxTerraformProjectMetadata } from '../utils/getNxTerraformProjectMetadata';
 
@@ -92,20 +95,29 @@ async function createNodesInternal(
 
 /**
  * Normalizes project.json into params for building Terraform targets.
- * backendProject is read from terraform-init target's metadata; varFile is via target args/configurations.
+ * backendProject is read from terraform-init target's metadata; outputFormat from terraform-output target's metadata.
  */
 function normalizeTargetOptions(
   projectJsonContent: ProjectConfiguration
 ): TargetsConfigurationParams {
   const initTarget = projectJsonContent.targets?.['terraform-init'];
-  const metadata = initTarget?.metadata as
+  const initMetadata = initTarget?.metadata as
     | TerraformInitTargetMetadata
     | undefined;
-  const backendProject = metadata?.backendProject ?? null;
+  const backendProject = initMetadata?.backendProject ?? null;
+
+  const outputTarget = projectJsonContent.targets?.['terraform-output'];
+  const outputMetadata = outputTarget?.metadata as
+    | TerraformOutputTargetMetadata
+    | undefined;
+  const outputFormat = outputMetadata?.outputFormat ?? 'tfvars';
 
   return {
     init: {
       backendProject,
+    },
+    output: {
+      outputFormat,
     },
   };
 }

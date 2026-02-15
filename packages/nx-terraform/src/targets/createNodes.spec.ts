@@ -213,6 +213,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getStatefulProjectTargets({
         init: { backendProject: 'my-backend' },
+        output: { outputFormat: 'tfvars' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -250,6 +251,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getBackendProjectTargets({
         init: { backendProject: null },
+        output: { outputFormat: 'tfvars' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -283,7 +285,7 @@ describe('createNodes', () => {
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getBackendProjectTargets(
-        { init: { backendProject: null } },
+        { init: { backendProject: null }, output: { outputFormat: 'tfvars' } },
         'aws-s3'
       );
 
@@ -320,7 +322,7 @@ describe('createNodes', () => {
       const result = await executeHandler(CONFIG_FILE_PATH, context);
 
       const expectedTargets = getBackendProjectTargets(
-        { init: { backendProject: null } },
+        { init: { backendProject: null }, output: { outputFormat: 'tfvars' } },
         'local'
       );
 
@@ -357,6 +359,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getStatefulProjectTargets({
         init: { backendProject: null },
+        output: { outputFormat: 'tfvars' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
@@ -367,6 +370,64 @@ describe('createNodes', () => {
           expectedTargets
         );
       }
+    });
+  });
+
+  describe('terraform-output target', () => {
+    it('should use tfvars format (key=value) when terraform-output metadata is missing', async () => {
+      const projectJson: ProjectConfiguration = {
+        root: PROJECT_ROOT,
+        projectType: 'application',
+        targets: {},
+        metadata: {
+          'nx-terraform': {
+            projectType: 'backend',
+          },
+        },
+      };
+
+      setupFileMocks(projectJson);
+
+      const context = createTestContext();
+      const result = await executeHandler(CONFIG_FILE_PATH, context);
+
+      const extracted = extractProjects(result, PROJECT_ROOT);
+      expect(extracted).not.toBeNull();
+      const cmd = extracted!.projects[PROJECT_ROOT].targets?.[
+        'terraform-output'
+      ]?.options?.command as string;
+      expect(cmd).toContain('.key)=\\(.value.value)');
+      expect(cmd).not.toContain('ascii_upcase');
+    });
+
+    it('should use env format (UPPERCASE keys) when terraform-output metadata.outputFormat is env', async () => {
+      const projectJson: ProjectConfiguration = {
+        root: PROJECT_ROOT,
+        projectType: 'application',
+        targets: {
+          'terraform-output': {
+            metadata: { outputFormat: 'env' },
+          },
+        },
+        metadata: {
+          'nx-terraform': {
+            projectType: 'backend',
+          },
+        },
+      };
+
+      setupFileMocks(projectJson);
+
+      const context = createTestContext();
+      const result = await executeHandler(CONFIG_FILE_PATH, context);
+
+      const extracted = extractProjects(result, PROJECT_ROOT);
+      expect(extracted).not.toBeNull();
+      const cmd = extracted!.projects[PROJECT_ROOT].targets?.[
+        'terraform-output'
+      ]?.options?.command as string;
+      expect(cmd).toContain('ascii_upcase');
+      expect(cmd).toContain('.value.value)');
     });
   });
 
@@ -390,6 +451,7 @@ describe('createNodes', () => {
 
       const expectedTargets = getModuleProjectTargets({
         init: { backendProject: null },
+        output: { outputFormat: 'tfvars' },
       });
 
       const extracted = extractProjects(result, PROJECT_ROOT);
