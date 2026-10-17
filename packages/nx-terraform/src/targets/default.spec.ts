@@ -1,4 +1,19 @@
-import { getTerraformOutputTarget } from './default';
+import { getTerraformInitTarget, getTerraformOutputTarget } from './default';
+
+describe('getTerraformInitTarget', () => {
+  it('should pass -backend-config without embedded quotes', () => {
+    const target = getTerraformInitTarget({ backendProject: 'my-backend' });
+    expect(target.options?.args).toEqual([
+      '-reconfigure',
+      '-backend-config=../my-backend/backend.config',
+    ]);
+  });
+
+  it('should only reconfigure without a backend project', () => {
+    const target = getTerraformInitTarget({ backendProject: null });
+    expect(target.options?.args).toEqual(['-reconfigure']);
+  });
+});
 
 describe('getTerraformOutputTarget', () => {
   it('should use tfvars format (key=value) when outputFormat is tfvars', () => {

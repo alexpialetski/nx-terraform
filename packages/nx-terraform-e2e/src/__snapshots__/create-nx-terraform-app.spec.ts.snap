@@ -317,7 +317,7 @@ exports[`create-nx-terraform-app end to end flow 2`] = `
       "options": {
         "args": [
           "-reconfigure",
-          "-backend-config="../terraform-setup/backend.config"",
+          "-backend-config=../terraform-setup/backend.config",
         ],
         "command": "terraform init",
         "cwd": "packages/terraform-infra",
