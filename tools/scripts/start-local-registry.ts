@@ -31,5 +31,8 @@ export default async () => {
   });
   await releasePublish({
     tag: 'e2e',
+    // e2e already depends on ^build; re-running build may restore dist/package.json
+    // from cache (always in CI, no daemon) and publish the release version, not 0.0.0-e2e
+    excludeTaskDependencies: true,
   });
 };
