@@ -22,13 +22,13 @@ describe('init generator', () => {
     );
   });
 
-  it('should add @cdktf/hcl2json as dev dependency', async () => {
+  it('should not add @cdktf/hcl2json to the host workspace (it is a plugin dependency)', async () => {
     const tree = createTreeWithEmptyWorkspace(options);
 
     await initGenerator(tree);
 
     const packageJson = readJson(tree, 'package.json');
-    expect(packageJson.devDependencies).toBeDefined();
-    expect(packageJson.devDependencies['@cdktf/hcl2json']).toBe('^0.21.0');
+    expect(packageJson.devDependencies?.['@cdktf/hcl2json']).toBeUndefined();
+    expect(packageJson.dependencies?.['@cdktf/hcl2json']).toBeUndefined();
   });
 });
