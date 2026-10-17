@@ -102,6 +102,46 @@ module "networking" {
     );
   });
 
+  it('should detect module dependency when project name differs from directory name', async () => {
+    const appProjectRoot = 'packages/app';
+    const mainTfPath = join(appProjectRoot, 'main.tf');
+
+    readFileMock.mockResolvedValue(`
+module "net" {
+  source = "../modules/networking/"
+}
+`);
+
+    const ctx = createTestContext(
+      {
+        app: { root: appProjectRoot, projectType: 'application', targets: {} },
+        'infra-networking': {
+          root: 'packages/modules/networking',
+          projectType: 'application',
+          targets: {},
+        },
+        // A project whose name equals the last path segment but lives elsewhere
+        networking: {
+          root: 'packages/other/dir',
+          projectType: 'application',
+          targets: {},
+        },
+      },
+      { app: [{ file: mainTfPath, hash: 'hash123' }] }
+    );
+
+    const results = await createDependencies({}, ctx);
+
+    expect(results).toEqual([
+      {
+        source: 'app',
+        target: 'infra-networking',
+        sourceFile: mainTfPath,
+        type: DependencyType.static,
+      },
+    ]);
+  });
+
   it('should skip remote module sources', async () => {
     const appProjectRoot = 'packages/app';
     const mainTfPath = join(appProjectRoot, 'main.tf');
