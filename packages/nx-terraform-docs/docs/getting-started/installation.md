@@ -32,6 +32,8 @@ This command will:
 - Register the plugin in `nx.json`
 - Enable automatic Terraform project discovery
 
+> **Note:** After installing or upgrading the plugin, run `npx nx sync`. The `sync-terraform-metadata` generator rewrites the metadata block in each project's `provider.tf`, and `nx sync:check` fails until this has been done.
+
 ### Step 2: Initialize the Plugin
 
 ```bash

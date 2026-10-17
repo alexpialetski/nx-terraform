@@ -17,6 +17,8 @@ This guide helps you migrate from various Terraform setups into an nx-terraform 
 5. Verifying dependencies
 6. Testing the migration
 
+> **Note:** After installing or upgrading the plugin, run `npx nx sync` (the sync generator rewrites `provider.tf` metadata; `nx sync:check` fails until then).
+
 ## From Standalone Terraform
 
 Migrating from a standalone Terraform setup (no monorepo) to nx-terraform.
