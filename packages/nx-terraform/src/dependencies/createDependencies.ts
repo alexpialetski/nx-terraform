@@ -12,6 +12,11 @@ import {
   isLocalPath,
 } from './utils';
 
+/** Normalizes a project/module path to a posix path without trailing slash. */
+function normalizeRoot(root: string): string {
+  return path.posix.normalize(root.replace(/\\/g, '/')).replace(/\/+$/, '');
+}
+
 /**
  * Creates dependencies between Terraform projects by:
  * 1. Creating static dependencies from projects to their backend projects (from project.json metadata)
@@ -21,6 +26,11 @@ export const createDependencies: CreateDependencies<
   NxTerraformPluginOptions
 > = async (_, ctx: CreateDependenciesContext) => {
   const results: RawProjectGraphDependency[] = [];
+
+  const projectNameByRoot = new Map<string, string>();
+  for (const [name, config] of Object.entries(ctx.projects)) {
+    projectNameByRoot.set(normalizeRoot(config.root), name);
+  }
 
   for (const [projectName, projectConfig] of Object.entries(ctx.projects)) {
     // ----------------------------------------------------------------
@@ -69,13 +79,13 @@ export const createDependencies: CreateDependencies<
           continue;
         }
 
-        // Extract the last segment of the path as the potential project name
-        const potentialProjectName = sourcePath.split('/').pop();
-
-        // Check if the last segment matches a project name
-        const targetProject = ctx.projects[potentialProjectName]
-          ? potentialProjectName
-          : undefined;
+        // Resolve the module source relative to the referencing project root
+        // and match it against known project roots (project name may differ
+        // from its directory name).
+        const resolvedRoot = normalizeRoot(
+          path.posix.join(normalizeRoot(projectConfig.root), sourcePath)
+        );
+        const targetProject = projectNameByRoot.get(resolvedRoot);
 
         // Skip if no target project found or if it's a self-reference
         if (!targetProject || targetProject === projectName) {
