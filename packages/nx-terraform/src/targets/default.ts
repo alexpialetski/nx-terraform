@@ -17,7 +17,7 @@ export const getTerraformInitTarget = (
   const args = ['-reconfigure'];
 
   if (options.backendProject) {
-    args.push(`-backend-config="../${options.backendProject}/backend.config"`);
+    args.push(`-backend-config=../${options.backendProject}/backend.config`);
   }
 
   return {
