@@ -1,4 +1,4 @@
-import { formatFiles, runTasksInSerial, Tree } from '@nx/devkit';
+import { formatFiles, Tree } from '@nx/devkit';
 
 import { PresetGeneratorSchema } from './schema';
 import { terraformBackendGenerator } from '../terraform-backend/terraform-backend';
@@ -9,10 +9,8 @@ export async function presetGenerator(
   tree: Tree,
   options: PresetGeneratorSchema
 ) {
-  const tasks = [];
-
   // Add nx-terraform plugin to the workspace
-  tasks.push(await initGenerator(tree));
+  await initGenerator(tree);
 
   // Scaffold terraform backend project only if backendType is provided
   if (options.backendType) {
@@ -32,8 +30,6 @@ export async function presetGenerator(
   });
 
   await formatFiles(tree);
-
-  return runTasksInSerial(...tasks);
 }
 
 export default presetGenerator;
