@@ -152,8 +152,11 @@ describe('sync-terraform-metadata generator', () => {
     const config = readProjectConfiguration(tree, projectName);
     expect(config.metadata?.['nx-terraform']?.projectType).toBe('module');
     expect(
-      (config.targets?.['terraform-init']?.metadata as { backendProject?: string })
-        ?.backendProject
+      (
+        config.targets?.['terraform-init']?.metadata as {
+          backendProject?: string;
+        }
+      )?.backendProject
     ).toBe('my-backend');
   });
 
@@ -427,10 +430,7 @@ provider "aws" {
     await syncTerraformMetadataGenerator(tree, {});
 
     // Check that provider.tf has metadata comment
-    const providerTfContent = tree.read(
-      `${projectRoot}/provider.tf`,
-      'utf-8'
-    );
+    const providerTfContent = tree.read(`${projectRoot}/provider.tf`, 'utf-8');
     expect(providerTfContent).toContain('nx-terraform-metadata-start');
     expect(providerTfContent).toContain('aws');
   });
@@ -516,10 +516,7 @@ provider "aws" {
     await syncTerraformMetadataGenerator(tree, {});
 
     // Check that provider.tf metadata only has AWS provider
-    const providerTfContent = tree.read(
-      `${projectRoot}/provider.tf`,
-      'utf-8'
-    );
+    const providerTfContent = tree.read(`${projectRoot}/provider.tf`, 'utf-8');
     expect(providerTfContent).toContain('nx-terraform-metadata-start');
     expect(providerTfContent).toContain('aws');
     expect(providerTfContent).not.toContain('local');
@@ -565,10 +562,7 @@ provider "aws" {
     await syncTerraformMetadataGenerator(tree, {});
 
     // Check that provider.tf content is unchanged
-    const providerTfContent = tree.read(
-      `${projectRoot}/provider.tf`,
-      'utf-8'
-    );
+    const providerTfContent = tree.read(`${projectRoot}/provider.tf`, 'utf-8');
     expect(providerTfContent).toBe(originalContent);
   });
 
@@ -641,5 +635,66 @@ provider "aws" {
 
     // Check that provider.tf was NOT created
     expect(tree.exists(`${projectRoot}/provider.tf`)).toBe(false);
+  });
+
+  describe('provider.tf metadata block formatting', () => {
+    const BLOCK = `# nx-terraform-metadata-start
+# providers: aws
+# nx-terraform-metadata-end`;
+    const PROVIDER = `provider "aws" {
+  region = "us-east-1"
+}`;
+
+    const setup = (providerTf: string) => {
+      const tree = createTreeWithEmptyWorkspace();
+      const projectRoot = 'packages/proj';
+      addProjectConfiguration(tree, 'proj', {
+        root: projectRoot,
+        projectType: 'application',
+        targets: {},
+        metadata: { 'nx-terraform': { projectType: 'module' } },
+      });
+      tree.write(`${projectRoot}/provider.tf`, providerTf);
+      return { tree, path: `${projectRoot}/provider.tf` };
+    };
+
+    it('appends block after a blank line to a file with trailing newline', async () => {
+      const { tree, path } = setup(`${PROVIDER}\n`);
+      await syncTerraformMetadataGenerator(tree, {});
+      expect(tree.read(path, 'utf-8')).toBe(`${PROVIDER}\n\n${BLOCK}\n`);
+    });
+
+    it('appends block to a file without trailing newline', async () => {
+      const { tree, path } = setup(PROVIDER);
+      await syncTerraformMetadataGenerator(tree, {});
+      expect(tree.read(path, 'utf-8')).toBe(`${PROVIDER}\n\n${BLOCK}\n`);
+    });
+
+    it('collapses extra trailing blank lines to a single newline', async () => {
+      const { tree, path } = setup(`${PROVIDER}\n\n\n\n`);
+      await syncTerraformMetadataGenerator(tree, {});
+      expect(tree.read(path, 'utf-8')).toBe(`${PROVIDER}\n\n${BLOCK}\n`);
+    });
+
+    it('is idempotent across re-runs for both newline variants', async () => {
+      for (const input of [`${PROVIDER}\n`, PROVIDER]) {
+        const { tree, path } = setup(input);
+        await syncTerraformMetadataGenerator(tree, {});
+        const first = tree.read(path, 'utf-8');
+        await syncTerraformMetadataGenerator(tree, {});
+        expect(tree.read(path, 'utf-8')).toBe(first);
+        expect(first.endsWith('\n')).toBe(true);
+        expect(first.endsWith('\n\n')).toBe(false);
+      }
+    });
+
+    it('replaces a stale block in place without mangling the file', async () => {
+      const stale = `# nx-terraform-metadata-start
+# providers: azurerm
+# nx-terraform-metadata-end`;
+      const { tree, path } = setup(`${stale}\n\n${PROVIDER}`);
+      await syncTerraformMetadataGenerator(tree, {});
+      expect(tree.read(path, 'utf-8')).toBe(`${BLOCK}\n\n${PROVIDER}\n`);
+    });
   });
 });

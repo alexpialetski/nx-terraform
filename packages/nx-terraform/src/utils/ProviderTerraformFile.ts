@@ -143,23 +143,25 @@ export class ProviderTerraformFile extends TerraformFile {
     const newCommentBlock =
       ProviderTerraformFile.formatMetadataComment(metadataString);
 
-    // Find and replace existing comment block or append if not found
+    // Replace the existing block in place, or append it if not found.
+    // Output is normalized: the block is separated from surrounding content
+    // by exactly one blank line and the file ends with exactly one newline.
     const match = this.initialFileContent.match(METADATA_COMMENT_REGEX);
 
-    if (match && match.index !== undefined) {
-      // Replace existing comment block
-      return (
-        this.initialFileContent.substring(0, match.index) +
-        newCommentBlock +
-        this.initialFileContent.substring(match.index + match[0].length)
-      );
-    } else {
-      // Append new comment block at the end
-      const trimmedContent = this.initialFileContent.trim();
-      return trimmedContent
-        ? `${trimmedContent}\n\n${newCommentBlock}`
-        : newCommentBlock.trim();
-    }
+    const before =
+      match && match.index !== undefined
+        ? this.initialFileContent.substring(0, match.index)
+        : this.initialFileContent;
+    const after =
+      match && match.index !== undefined
+        ? this.initialFileContent.substring(match.index + match[0].length)
+        : '';
+
+    return (
+      [before.trim(), newCommentBlock.trim(), after.trim()]
+        .filter((part) => part.length > 0)
+        .join('\n\n') + '\n'
+    );
   }
 
   /**
