@@ -1,3 +1,18 @@
+## 0.11.1 (2026-10-17)
+
+### 🩹 Fixes
+
+- **e2e:** publish the 0.0.0-e2e build instead of the cached release version ([57a3900](https://github.com/alexpialetski/nx-terraform/commit/57a3900))
+- **nx-terraform:** declare hcl2json dependency and nx/devkit ranges ([94be273](https://github.com/alexpialetski/nx-terraform/commit/94be273))
+- **nx-terraform:** drop embedded quotes from -backend-config arg ([dad2766](https://github.com/alexpialetski/nx-terraform/commit/dad2766))
+- **nx-terraform:** normalize provider.tf metadata block newlines ([61a2744](https://github.com/alexpialetski/nx-terraform/commit/61a2744))
+- **nx-terraform:** resolve module sources by project root, not directory name ([5111afc](https://github.com/alexpialetski/nx-terraform/commit/5111afc))
+
+### ❤️ Thank You
+
+- Aliaksei Pialetski
+- Claude Opus 5.5
+
 ## 0.11.0 (2026-02-15)
 
 ### 🚀 Features
